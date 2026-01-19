@@ -2,7 +2,7 @@
 <html>
 <head>
   <meta charset="utf-8">
-  <title>Prueba OTP + Sheets</title>
+  <title>Acceso con OTP</title>
 
   <script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-app-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-auth-compat.js"></script>
@@ -10,7 +10,13 @@
   <style>
     body { font-family: Arial; margin: 40px; }
     input, button { display:block; margin:10px 0; padding:8px; }
-    #mensaje { margin-top:20px; white-space: pre-line; background:#f4f4f4; padding:10px; }
+    #mensaje {
+      margin-top:20px;
+      background:#f2f2f2;
+      padding:10px;
+      white-space: pre-line;
+      border: 1px solid #ccc;
+    }
   </style>
 </head>
 <body>
@@ -25,7 +31,7 @@
 <input id="codigo" placeholder="Escribe el código recibido">
 <button onclick="verificarCodigo()">Verificar</button>
 
-<h3>Registro de depuración:</h3>
+<h3>Registro de sistema:</h3>
 <p id="mensaje"></p>
 
 <script>
@@ -42,7 +48,7 @@ const firebaseConfig = {
 
 firebase.initializeApp(firebaseConfig);
 
-// ======= TU URL DE APPS SCRIPT =======
+// ======= TU APPS SCRIPT (EL QUE FUNCIONA) =======
 const APPS_SCRIPT_URL =
 "https://script.google.com/macros/s/AKfycbwUfoXe3Dv0HzBsGArXPWPyWdL0NFC_PrWo_DqfdXjQT25UxLsPqCHmATtIMc74WOSN/exec";
 
@@ -63,21 +69,17 @@ async function consultarSheets(numero){
   log("🔗 URL enviada:");
   log(url);
 
-  const respuesta = await fetch(url, { mode: "cors" });
+  const resp = await fetch(url);
+  const texto = await resp.text();
 
-  const texto = await respuesta.text(); // primero vemos TEXTO crudo
   log("📥 RESPUESTA CRUDA:");
   log(texto);
 
-  try {
-    const data = JSON.parse(texto);
-    log("✅ JSON interpretado:");
-    log(JSON.stringify(data, null, 2));
-    return data;
-  } catch (e) {
-    log("❌ ERROR: no es JSON válido");
-    throw e;
-  }
+  const data = JSON.parse(texto); // <-- aquí ya sabemos que SÍ es JSON válido
+  log("✅ JSON interpretado:");
+  log(JSON.stringify(data, null, 2));
+
+  return data;
 }
 
 async function enviarCodigo() {
@@ -93,11 +95,13 @@ async function enviarCodigo() {
   telefonoGlobal = "+52" + tel;
   const numeroParaSheet = "52" + tel;
 
-  log("📞 Teléfono: " + tel);
-  log("➡️ Firebase: " + telefonoGlobal);
-  log("➡️ Sheets: " + numeroParaSheet);
+  log("📞 Teléfono escrito: " + tel);
+  log("➡️ Para Firebase: " + telefonoGlobal);
+  log("➡️ Para Sheets: " + numeroParaSheet);
 
   try {
+    log("🔄 Consultando Apps Script...");
+
     const data = await consultarSheets(numeroParaSheet);
 
     if (!data.existe) {
@@ -105,7 +109,7 @@ async function enviarCodigo() {
       return;
     }
 
-    log("✅ AUTORIZADO. Enviando SMS...");
+    log("✅ AUTORIZADO — enviando SMS...");
 
     confirmationResult = await firebase.auth()
       .signInWithPhoneNumber(telefonoGlobal, window.recaptchaVerifier);
@@ -114,7 +118,8 @@ async function enviarCodigo() {
 
   } catch (e) {
     console.error(e);
-    log("❌ Error al consultar la base de datos.");
+    log("❌ ERROR REAL DE SISTEMA:");
+    log(e.toString());
   }
 }
 
@@ -141,7 +146,7 @@ async function verificarCodigo() {
     }
 
     document.getElementById("mensaje").innerHTML +=
-      "\n\n✅ Código correcto.\nLink: " + data.link;
+      "\n\n✅ Código correcto.\n🔗 Link: " + data.link;
 
   } catch (error) {
     log("❌ Código incorrecto.");
