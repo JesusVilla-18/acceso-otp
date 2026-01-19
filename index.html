@@ -45,7 +45,7 @@ firebase.initializeApp(firebaseConfig);
 const APPS_SCRIPT_URL =
 "https://script.google.com/macros/s/AKfycbzUGJnrhOPq6fXje-DmuqJFQk-_aU7wMhmrFOSQBvospoqRPWZB5evC6dGpxvRl9Td5/exec";
 
-// Necesario para JSONP (Apps Script + GitHub)
+// ======= NECESARIO PARA JSONP =======
 window.ultimoResultado = null;
 function callback(data) {
   window.ultimoResultado = data;
@@ -75,7 +75,11 @@ async function enviarCodigo() {
     "Verificando número en base de datos...";
 
   try {
-    // Llamada JSONP (funciona con GitHub Pages)
+
+    // IMPORTANTÍSIMO: limpiar antes de consultar
+    window.ultimoResultado = null;
+
+    // Llamada JSONP (compatible con GitHub Pages)
     await fetch(
       APPS_SCRIPT_URL +
       "?cel=" + numeroParaSheet +
@@ -102,7 +106,7 @@ async function enviarCodigo() {
 
   } catch (e) {
     document.getElementById("mensaje").innerText =
-      "Error al consultar la base de datos.";
+      "❌ Error al consultar la base de datos.";
   }
 }
 
@@ -120,6 +124,12 @@ async function verificarCodigo() {
 
     const telParaSheet = telefonoGlobal.replace("+", ""); 
     // "+5255..." → "5255..."
+
+    document.getElementById("mensaje").innerText =
+      "Verificando acceso final...";
+
+    // Limpiar antes de segunda consulta
+    window.ultimoResultado = null;
 
     // Segunda consulta para obtener el link
     await fetch(
@@ -151,4 +161,3 @@ async function verificarCodigo() {
 
 </body>
 </html>
-
