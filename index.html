@@ -1,0 +1,133 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <title>Acceso con OTP</title>
+
+  <script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-auth-compat.js"></script>
+
+  <style>
+    body { font-family: Arial; margin: 40px; }
+    input, button { display:block; margin:10px 0; padding:8px; }
+    #mensaje { margin-top:20px; }
+  </style>
+</head>
+<body>
+
+<h2>Acceso con código SMS</h2>
+
+<input id="telefono" placeholder="Escribe tu celular (10 dígitos)">
+<button id="enviarCodigo" onclick="enviarCodigo()">Enviar código</button>
+
+<br>
+
+<input id="codigo" placeholder="Escribe el código recibido">
+<button onclick="verificarCodigo()">Verificar</button>
+
+<p id="mensaje"></p>
+
+<script>
+// ======= PON AQUÍ TUS CLAVES DE FIREBASE =======
+const firebaseConfig = {
+  apiKey: "AIzaSyCDpJfISRnxCJiG1PERbYDJ3jQdzxKvIlQ",
+  authDomain: "acceso-drive-otp.firebaseapp.com",
+  projectId: "acceso-drive-otp",
+  storageBucket: "acceso-drive-otp.firebasestorage.app",
+  messagingSenderId: "175952295726",
+  appId: "1:175952295726:web:1e20d679ae42a0106a6cbf",
+  measurementId: "G-49P3MFSGC1"
+};
+
+firebase.initializeApp(firebaseConfig);
+
+// ======= PON AQUÍ TU URL DE APPS SCRIPT =======
+const APPS_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbxu9Si4V-1dZhq6MW7FqrPOaVxrjqf0LuV3Z0dIZceeeyB1qY5poEKIkfLBgSk7zaVi/exec";
+
+window.recaptchaVerifier = new firebase.auth.RecaptchaVerifier('enviarCodigo', {
+  'size': 'invisible'
+});
+
+let confirmationResult;
+let telefonoGlobal = "";
+
+async function enviarCodigo() {
+  let tel = document.getElementById("telefono").value.trim();
+
+  if (tel.length !== 10 || isNaN(tel)) {
+    document.getElementById("mensaje").innerText =
+      "Escribe un celular válido de 10 dígitos.";
+    return;
+  }
+
+  telefonoGlobal = "+52" + tel;
+
+  // 1️⃣ Primero revisamos si el número existe en tu Google Sheet
+  document.getElementById("mensaje").innerText =
+    "Verificando número en base de datos...";
+
+  try {
+    const resp = await fetch(APPS_SCRIPT_URL + "?cel=" + tel);
+    const data = await resp.json();
+
+    if (!data.existe) {
+      document.getElementById("mensaje").innerText =
+        "❌ Tu número no está autorizado.";
+      return;
+    }
+
+    // 2️⃣ Si existe → mandamos OTP por Firebase
+    firebase.auth().signInWithPhoneNumber(
+      telefonoGlobal,
+      window.recaptchaVerifier
+    ).then(function (result) {
+      confirmationResult = result;
+      document.getElementById("mensaje").innerText =
+        "📩 Código enviado por SMS.";
+    });
+
+  } catch (e) {
+    document.getElementById("mensaje").innerText =
+      "Error al consultar la base de datos.";
+  }
+}
+
+async function verificarCodigo() {
+  let codigo = document.getElementById("codigo").value.trim();
+
+  if (!confirmationResult) {
+    document.getElementById("mensaje").innerText =
+      "Primero solicita el código.";
+    return;
+  }
+
+  try {
+    await confirmationResult.confirm(codigo);
+
+    // 3️⃣ Si el código es correcto → buscamos el link de Drive
+    const telSinCodigo = telefonoGlobal.replace("+52", "");
+
+    const resp = await fetch(APPS_SCRIPT_URL + "?cel=" + telSinCodigo);
+    const data = await resp.json();
+
+    if (!data.existe) {
+      document.getElementById("mensaje").innerText =
+        "❌ Número no autorizado.";
+      return;
+    }
+
+    document.getElementById("mensaje").innerHTML =
+      "✅ Código correcto.<br><br>" +
+      "Aquí está tu archivo:<br><b>" +
+      data.link +
+      "</b>";
+
+  } catch (error) {
+    document.getElementById("mensaje").innerText =
+      "❌ Código incorrecto.";
+  }
+}
+</script>
+
+</body>
+</html>
