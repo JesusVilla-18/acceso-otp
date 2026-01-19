@@ -2,7 +2,7 @@
 <html>
 <head>
   <meta charset="utf-8">
-  <title>Acceso con OTP</title>
+  <title>Prueba OTP + Sheets</title>
 
   <script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-app-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-auth-compat.js"></script>
@@ -10,7 +10,7 @@
   <style>
     body { font-family: Arial; margin: 40px; }
     input, button { display:block; margin:10px 0; padding:8px; }
-    #mensaje { margin-top:20px; white-space: pre-line; }
+    #mensaje { margin-top:20px; white-space: pre-line; background:#f4f4f4; padding:10px; }
   </style>
 </head>
 <body>
@@ -25,6 +25,7 @@
 <input id="codigo" placeholder="Escribe el código recibido">
 <button onclick="verificarCodigo()">Verificar</button>
 
+<h3>Registro de depuración:</h3>
 <p id="mensaje"></p>
 
 <script>
@@ -41,11 +42,10 @@ const firebaseConfig = {
 
 firebase.initializeApp(firebaseConfig);
 
-// ======= TU NUEVA URL DE APPS SCRIPT =======
+// ======= TU URL DE APPS SCRIPT =======
 const APPS_SCRIPT_URL =
 "https://script.google.com/macros/s/AKfycbwUfoXe3Dv0HzBsGArXPWPyWdL0NFC_PrWo_DqfdXjQT25UxLsPqCHmATtIMc74WOSN/exec";
 
-// reCAPTCHA invisible
 window.recaptchaVerifier = new firebase.auth.RecaptchaVerifier('enviarCodigo', {
   'size': 'invisible'
 });
@@ -60,14 +60,24 @@ function log(msg){
 async function consultarSheets(numero){
   const url = `${APPS_SCRIPT_URL}?cel=${numero}`;
 
-  log("🔄 Consultando Apps Script...");
+  log("🔗 URL enviada:");
+  log(url);
 
-  const respuesta = await fetch(url);
-  const data = await respuesta.json(); // 👈 CLAVE: JSON normal
+  const respuesta = await fetch(url, { mode: "cors" });
 
-  log("📥 Respuesta Apps Script: " + JSON.stringify(data));
+  const texto = await respuesta.text(); // primero vemos TEXTO crudo
+  log("📥 RESPUESTA CRUDA:");
+  log(texto);
 
-  return data;
+  try {
+    const data = JSON.parse(texto);
+    log("✅ JSON interpretado:");
+    log(JSON.stringify(data, null, 2));
+    return data;
+  } catch (e) {
+    log("❌ ERROR: no es JSON válido");
+    throw e;
+  }
 }
 
 async function enviarCodigo() {
@@ -76,28 +86,26 @@ async function enviarCodigo() {
   let tel = document.getElementById("telefono").value.trim();
 
   if (tel.length !== 10 || isNaN(tel)) {
-    document.getElementById("mensaje").innerText =
-      "Escribe un celular válido de 10 dígitos.";
+    log("❌ Escribe 10 dígitos válidos.");
     return;
   }
 
-  telefonoGlobal = "+52" + tel;      
-  const numeroParaSheet = "52" + tel; 
+  telefonoGlobal = "+52" + tel;
+  const numeroParaSheet = "52" + tel;
 
-  log("📞 Teléfono escrito: " + tel);
-  log("➡️ Para Firebase: " + telefonoGlobal);
-  log("➡️ Para Sheets: " + numeroParaSheet);
+  log("📞 Teléfono: " + tel);
+  log("➡️ Firebase: " + telefonoGlobal);
+  log("➡️ Sheets: " + numeroParaSheet);
 
   try {
     const data = await consultarSheets(numeroParaSheet);
 
     if (!data.existe) {
-      document.getElementById("mensaje").innerText =
-        "❌ Tu número no está autorizado.";
+      log("⚠️ Resultado final: NO AUTORIZADO");
       return;
     }
 
-    log("✅ Número autorizado. Enviando SMS...");
+    log("✅ AUTORIZADO. Enviando SMS...");
 
     confirmationResult = await firebase.auth()
       .signInWithPhoneNumber(telefonoGlobal, window.recaptchaVerifier);
@@ -106,8 +114,7 @@ async function enviarCodigo() {
 
   } catch (e) {
     console.error(e);
-    document.getElementById("mensaje").innerText =
-      "❌ Error al consultar la base de datos.";
+    log("❌ Error al consultar la base de datos.");
   }
 }
 
@@ -115,33 +122,29 @@ async function verificarCodigo() {
   let codigo = document.getElementById("codigo").value.trim();
 
   if (!confirmationResult) {
-    document.getElementById("mensaje").innerText =
-      "Primero solicita el código.";
+    log("Primero solicita el código.");
     return;
   }
 
   try {
     await confirmationResult.confirm(codigo);
 
-    const telParaSheet = telefonoGlobal.replace("+", ""); 
+    const telParaSheet = telefonoGlobal.replace("+", "");
+
+    log("🔁 Reconsultando Sheets con: " + telParaSheet);
 
     const data = await consultarSheets(telParaSheet);
 
     if (!data.existe) {
-      document.getElementById("mensaje").innerText =
-        "❌ Número no autorizado.";
+      log("❌ Número no autorizado.");
       return;
     }
 
-    document.getElementById("mensaje").innerHTML =
-      "✅ Código correcto.<br><br>" +
-      "Aquí está tu archivo:<br><b>" +
-      data.link +
-      "</b>";
+    document.getElementById("mensaje").innerHTML +=
+      "\n\n✅ Código correcto.\nLink: " + data.link;
 
   } catch (error) {
-    document.getElementById("mensaje").innerText =
-      "❌ Código incorrecto.";
+    log("❌ Código incorrecto.");
   }
 }
 </script>
