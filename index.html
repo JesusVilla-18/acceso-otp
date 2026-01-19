@@ -43,9 +43,15 @@ const firebaseConfig = {
 
 firebase.initializeApp(firebaseConfig);
 
-// ======= TU APPS SCRIPT (YA PUESTO) =======
+// ======= TU APPS SCRIPT =======
 const APPS_SCRIPT_URL =
 "https://script.google.com/macros/s/AKfycbwUfoXe3Dv0HzBsGArXPWPyWdL0NFC_PrWo_DqfdXjQT25UxLsPqCHmATtIMc74WOSN/exec";
+
+// ======= JSONP (para evitar CORS en GitHub Pages) =======
+window.ultimoResultado = null;
+function callback(data) {
+  window.ultimoResultado = data;
+}
 
 // reCAPTCHA invisible
 window.recaptchaVerifier = new firebase.auth.RecaptchaVerifier('enviarCodigo', {
@@ -77,8 +83,14 @@ async function enviarCodigo() {
     "🔄 Consultando Apps Script...";
 
   try {
-    const resp = await fetch(APPS_SCRIPT_URL + "?cel=" + numeroParaSheet);
-    const data = await resp.json();
+    // ---- LLAMADA JSONP (IMPORTANTE) ----
+    await fetch(
+      APPS_SCRIPT_URL +
+      "?cel=" + numeroParaSheet +
+      "&callback=callback"
+    );
+
+    const data = window.ultimoResultado;
 
     if (!data || !data.existe) {
       document.getElementById("mensaje").innerText =
@@ -122,8 +134,13 @@ async function verificarCodigo() {
     const telParaSheet = telefonoGlobal.replace("+", "");
     // "+5255..." → "5255..."
 
-    const resp = await fetch(APPS_SCRIPT_URL + "?cel=" + telParaSheet);
-    const data = await resp.json();
+    await fetch(
+      APPS_SCRIPT_URL +
+      "?cel=" + telParaSheet +
+      "&callback=callback"
+    );
+
+    const data = window.ultimoResultado;
 
     if (!data || !data.existe) {
       document.getElementById("mensaje").innerText =
