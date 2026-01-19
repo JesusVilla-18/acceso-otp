@@ -67,7 +67,8 @@ async function enviarCodigo() {
     "Verificando número en base de datos...";
 
   try {
-    const resp = await fetch(APPS_SCRIPT_URL + "?cel=52" + tel);
+    const numeroParaSheet = "52" + tel;   // <-- clave
+    const resp = await fetch(APPS_SCRIPT_URL + "?cel=" + numeroParaSheet);
     const data = await resp.json();
 
     if (!data.existe) {
@@ -131,4 +132,5 @@ async function verificarCodigo() {
 
 </body>
 </html>
+
 
