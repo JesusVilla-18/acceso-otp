@@ -11,7 +11,7 @@
     body { font-family: Arial; margin: 40px; }
     input, button { display:block; margin:10px 0; padding:8px; }
     #mensaje { margin-top:20px; }
-    .debug { color: gray; font-size: 12px; }
+    #debug { color: gray; font-size: 12px; }
   </style>
 </head>
 <body>
@@ -27,7 +27,7 @@
 <button onclick="verificarCodigo()">Verificar</button>
 
 <p id="mensaje"></p>
-<p id="debug" class="debug"></p>
+<p id="debug"></p>
 
 <script>
 // ======= FIREBASE =======
@@ -43,9 +43,9 @@ const firebaseConfig = {
 
 firebase.initializeApp(firebaseConfig);
 
-// ======= TU URL DE APPS SCRIPT (PON LA TUYA ACTUAL) =======
+// ======= TU APPS SCRIPT (YA PUESTO) =======
 const APPS_SCRIPT_URL =
-"https://script.google.com/macros/s/AKfycbzUGJnrhOPq6fXje-DmuqJFQk-_aU7wMhmrFOSQBvospoqRPWZB5evC6dGpxvRl9Td5/exec";
+"https://script.google.com/macros/s/AKfycbwUfoXe3Dv0HzBsGArXPWPyWdL0NFC_PrWo_DqfdXjQT25UxLsPqCHmATtIMc74WOSN/exec";
 
 // reCAPTCHA invisible
 window.recaptchaVerifier = new firebase.auth.RecaptchaVerifier('enviarCodigo', {
@@ -64,28 +64,31 @@ async function enviarCodigo() {
     return;
   }
 
-  telefonoGlobal = "+52" + tel;      // para Firebase
-  const numeroParaSheet = "52" + tel; // EXACTO como lo tienes en Sheets
+  telefonoGlobal = "+52" + tel;       // para Firebase
+  const numeroParaSheet = "52" + tel; // EXACTO como tu Sheet
 
   document.getElementById("mensaje").innerText =
     "Verificando número en base de datos...";
 
   document.getElementById("debug").innerHTML =
-    `📞 Tel: ${tel}<br>` +
-    `➡️ Firebase: ${telefonoGlobal}<br>` +
-    `➡️ Sheets: ${numeroParaSheet}`;
+    `📞 Teléfono escrito: ${tel}<br>` +
+    `➡️ Para Firebase: ${telefonoGlobal}<br>` +
+    `➡️ Para Sheets: ${numeroParaSheet}<br>` +
+    "🔄 Consultando Apps Script...";
 
   try {
     const resp = await fetch(APPS_SCRIPT_URL + "?cel=" + numeroParaSheet);
     const data = await resp.json();
 
-    if (!data.existe) {
+    if (!data || !data.existe) {
       document.getElementById("mensaje").innerText =
         "❌ Tu número no está autorizado.";
+      document.getElementById("debug").innerHTML +=
+        "<br>⚠️ Resultado final: NO AUTORIZADO";
       return;
     }
 
-    // Mandar OTP por Firebase
+    // Si existe → mandar OTP por Firebase
     firebase.auth().signInWithPhoneNumber(
       telefonoGlobal,
       window.recaptchaVerifier
@@ -93,6 +96,8 @@ async function enviarCodigo() {
       confirmationResult = result;
       document.getElementById("mensaje").innerText =
         "📩 Código enviado por SMS.";
+      document.getElementById("debug").innerHTML +=
+        "<br>✅ Número autorizado — OTP enviado";
     });
 
   } catch (e) {
@@ -114,13 +119,13 @@ async function verificarCodigo() {
   try {
     await confirmationResult.confirm(codigo);
 
-    const telParaSheet = telefonoGlobal.replace("+", ""); 
-    // "+5255..." → "5255..." (mismo formato que tu Sheet)
+    const telParaSheet = telefonoGlobal.replace("+", "");
+    // "+5255..." → "5255..."
 
     const resp = await fetch(APPS_SCRIPT_URL + "?cel=" + telParaSheet);
     const data = await resp.json();
 
-    if (!data.existe) {
+    if (!data || !data.existe) {
       document.getElementById("mensaje").innerText =
         "❌ Número no autorizado.";
       return;
