@@ -106,9 +106,10 @@ async function verificarCodigo() {
     await confirmationResult.confirm(codigo);
 
     // 3️⃣ Si el código es correcto → buscamos el link de Drive
-    const telSinCodigo = telefonoGlobal.replace("+52", "");
-
-    const resp = await fetch(APPS_SCRIPT_URL + "?cel=" + telSinCodigo);
+    const telParaSheet = telefonoGlobal.replace("+", ""); 
+    // convierte "+525500000000" → "525500000000"
+    
+    const resp = await fetch(APPS_SCRIPT_URL + "?cel=" + telParaSheet);
     const data = await resp.json();
 
     if (!data.existe) {
@@ -132,5 +133,6 @@ async function verificarCodigo() {
 
 </body>
 </html>
+
 
 
