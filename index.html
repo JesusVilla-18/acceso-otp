@@ -28,7 +28,7 @@
 <p id="mensaje"></p>
 
 <script>
-// ======= PON AQUÍ TUS CLAVES DE FIREBASE =======
+// ======= FIREBASE =======
 const firebaseConfig = {
   apiKey: "AIzaSyCDpJfISRnxCJiG1PERbYDJ3jQdzxKvIlQ",
   authDomain: "acceso-drive-otp.firebaseapp.com",
@@ -41,9 +41,17 @@ const firebaseConfig = {
 
 firebase.initializeApp(firebaseConfig);
 
-// ======= PON AQUÍ TU URL DE APPS SCRIPT =======
-const APPS_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbzPmT92S2njBIaficr4usBzETp_f3ZSKdW5LS9hpWbKFc-_BKL4U5zeeL77PYGZ9iwC/exec";
+// ======= TU URL DE APPS SCRIPT =======
+const APPS_SCRIPT_URL =
+"https://script.google.com/macros/s/AKfycbzPmT92S2njBIaficr4usBzETp_f3ZSKdW5LS9hpWbKFc-_BKL4U5zeeL77PYGZ9iwC/exec";
 
+// Necesario para JSONP (Apps Script + GitHub)
+window.ultimoResultado = null;
+function callback(data) {
+  window.ultimoResultado = data;
+}
+
+// reCAPTCHA invisible
 window.recaptchaVerifier = new firebase.auth.RecaptchaVerifier('enviarCodigo', {
   'size': 'invisible'
 });
@@ -60,24 +68,29 @@ async function enviarCodigo() {
     return;
   }
 
-  telefonoGlobal = "+52" + tel;
+  telefonoGlobal = "+52" + tel;      // para Firebase
+  const numeroParaSheet = "52" + tel; // para Sheets
 
-  // 1️⃣ Primero revisamos si el número existe en tu Google Sheet
   document.getElementById("mensaje").innerText =
     "Verificando número en base de datos...";
 
   try {
-    const numeroParaSheet = "52" + tel;   // <-- clave
-    const resp = await fetch(APPS_SCRIPT_URL + "?cel=" + numeroParaSheet);
-    const data = await resp.json();
+    // Llamada JSONP (funciona con GitHub Pages)
+    await fetch(
+      APPS_SCRIPT_URL +
+      "?cel=" + numeroParaSheet +
+      "&callback=callback"
+    );
 
-    if (!data.existe) {
+    const data = window.ultimoResultado;
+
+    if (!data || !data.existe) {
       document.getElementById("mensaje").innerText =
         "❌ Tu número no está autorizado.";
       return;
     }
 
-    // 2️⃣ Si existe → mandamos OTP por Firebase
+    // Si existe → mandar OTP por Firebase
     firebase.auth().signInWithPhoneNumber(
       telefonoGlobal,
       window.recaptchaVerifier
@@ -105,14 +118,19 @@ async function verificarCodigo() {
   try {
     await confirmationResult.confirm(codigo);
 
-    // 3️⃣ Si el código es correcto → buscamos el link de Drive
     const telParaSheet = telefonoGlobal.replace("+", ""); 
-    // convierte "+525500000000" → "525500000000"
-    
-    const resp = await fetch(APPS_SCRIPT_URL + "?cel=" + telParaSheet);
-    const data = await resp.json();
+    // "+5255..." → "5255..."
 
-    if (!data.existe) {
+    // Segunda consulta para obtener el link
+    await fetch(
+      APPS_SCRIPT_URL +
+      "?cel=" + telParaSheet +
+      "&callback=callback"
+    );
+
+    const data = window.ultimoResultado;
+
+    if (!data || !data.existe) {
       document.getElementById("mensaje").innerText =
         "❌ Número no autorizado.";
       return;
@@ -133,7 +151,3 @@ async function verificarCodigo() {
 
 </body>
 </html>
-
-
-
-
