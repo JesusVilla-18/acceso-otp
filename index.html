@@ -42,7 +42,7 @@ const firebaseConfig = {
 firebase.initializeApp(firebaseConfig);
 
 // ======= PON AQUÍ TU URL DE APPS SCRIPT =======
-const APPS_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbxu9Si4V-1dZhq6MW7FqrPOaVxrjqf0LuV3Z0dIZceeeyB1qY5poEKIkfLBgSk7zaVi/exec";
+const APPS_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbzPmT92S2njBIaficr4usBzETp_f3ZSKdW5LS9hpWbKFc-_BKL4U5zeeL77PYGZ9iwC/exec";
 
 window.recaptchaVerifier = new firebase.auth.RecaptchaVerifier('enviarCodigo', {
   'size': 'invisible'
@@ -133,6 +133,7 @@ async function verificarCodigo() {
 
 </body>
 </html>
+
 
 
 
