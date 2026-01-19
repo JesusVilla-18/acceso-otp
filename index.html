@@ -81,12 +81,16 @@ async function enviarCodigo() {
 
     // Llamada JSONP (compatible con GitHub Pages)
     await fetch(
-      APPS_SCRIPT_URL +
-      "?cel=" + numeroParaSheet +
-      "&callback=callback"
-    );
+  APPS_SCRIPT_URL +
+  "?cel=" + numeroParaSheet +
+  "&callback=callback"
+);
 
-    const data = window.ultimoResultado;
+// 👉 ESPERAR hasta que llegue la respuesta (esto es lo que faltaba)
+await new Promise(resolve => setTimeout(resolve, 800));
+
+const data = window.ultimoResultado;
+
 
     if (!data || !data.existe) {
       document.getElementById("mensaje").innerText =
@@ -161,4 +165,5 @@ async function verificarCodigo() {
 
 </body>
 </html>
+
 
