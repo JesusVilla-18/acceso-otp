@@ -37,20 +37,20 @@
 <script>
 // ======= FIREBASE =======
 const firebaseConfig = {
-  apiKey: "AIzaSyCDpJfISRnxCJiG1PERbYDJ3jQdzxKvIlQ",
-  authDomain: "acceso-drive-otp.firebaseapp.com",
-  projectId: "acceso-drive-otp",
-  storageBucket: "acceso-drive-otp.firebasestorage.app",
-  messagingSenderId: "175952295726",
-  appId: "1:175952295726:web:1e20d679ae42a0106a6cbf",
-  measurementId: "G-49P3MFSGC1"
+  apiKey: "AIzaSyCOxPGwuNYUqE_rmDeawt_x_lsVMNSpx6w",
+  authDomain: "acceso-drive-otp-c13fb.firebaseapp.com",
+  projectId: "acceso-drive-otp-c13fb",
+  storageBucket: "acceso-drive-otp-c13fb.firebasestorage.app",
+  messagingSenderId: "620751699211",
+  appId: "1:620751699211:web:79811953dfef547664f60e",
+  measurementId: "G-CVTNV4G66W"
 };
 
 firebase.initializeApp(firebaseConfig);
 
 // ======= TU APPS SCRIPT (EL QUE FUNCIONA) =======
 const APPS_SCRIPT_URL =
-"https://script.google.com/macros/s/AKfycbwUfoXe3Dv0HzBsGArXPWPyWdL0NFC_PrWo_DqfdXjQT25UxLsPqCHmATtIMc74WOSN/exec";
+"https://script.google.com/macros/s/AKfycbykxvJV31sMMXXF_NoxqVLqqAXtk3KVbyP0zsNogi3KedFQK3hF0EWg312t2AiWC-Qymg/exec";
 
 window.recaptchaVerifier = new firebase.auth.RecaptchaVerifier('enviarCodigo', {
   'size': 'invisible'
@@ -156,3 +156,4 @@ async function verificarCodigo() {
 
 </body>
 </html>
+
