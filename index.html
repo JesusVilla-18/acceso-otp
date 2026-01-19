@@ -11,6 +11,14 @@
     body { font-family: Arial; margin: 40px; }
     input, button { display:block; margin:10px 0; padding:8px; }
     #mensaje { margin-top:20px; }
+    #debug {
+      background:#f0f0f0;
+      padding:10px;
+      border:1px solid #ccc;
+      font-family:monospace;
+      margin-top:20px;
+      white-space: pre-wrap;
+    }
   </style>
 </head>
 <body>
@@ -26,6 +34,9 @@
 <button onclick="verificarCodigo()">Verificar</button>
 
 <p id="mensaje"></p>
+
+<h3>🛠️ DEPURACIÓN (importante)</h3>
+<div id="debug"></div>
 
 <script>
 // ======= FIREBASE =======
@@ -45,10 +56,11 @@ firebase.initializeApp(firebaseConfig);
 const APPS_SCRIPT_URL =
 "https://script.google.com/macros/s/AKfycbzUGJnrhOPq6fXje-DmuqJFQk-_aU7wMhmrFOSQBvospoqRPWZB5evC6dGpxvRl9Td5/exec";
 
-// ======= NECESARIO PARA JSONP =======
+// Para JSONP
 window.ultimoResultado = null;
 function callback(data) {
   window.ultimoResultado = data;
+  log("📥 Respuesta Apps Script: " + JSON.stringify(data));
 }
 
 // reCAPTCHA invisible
@@ -59,7 +71,13 @@ window.recaptchaVerifier = new firebase.auth.RecaptchaVerifier('enviarCodigo', {
 let confirmationResult;
 let telefonoGlobal = "";
 
+function log(text){
+  document.getElementById("debug").innerText += text + "\n";
+}
+
 async function enviarCodigo() {
+  document.getElementById("debug").innerText = ""; // limpiar logs
+
   let tel = document.getElementById("telefono").value.trim();
 
   if (tel.length !== 10 || isNaN(tel)) {
@@ -69,36 +87,39 @@ async function enviarCodigo() {
   }
 
   telefonoGlobal = "+52" + tel;      // para Firebase
-  const numeroParaSheet = "52" + tel; // para Sheets
+  const numero52 = "52" + tel;       // para Sheets
+
+  log("📞 Teléfono escrito: " + tel);
+  log("➡️ Para Firebase: " + telefonoGlobal);
+  log("➡️ Para Sheets: " + numero52);
 
   document.getElementById("mensaje").innerText =
     "Verificando número en base de datos...";
 
   try {
+    log("🔄 Consultando Apps Script...");
 
-    // IMPORTANTÍSIMO: limpiar antes de consultar
-    window.ultimoResultado = null;
-
-    // Llamada JSONP (compatible con GitHub Pages)
     await fetch(
-  APPS_SCRIPT_URL +
-  "?cel=" + numeroParaSheet +
-  "&callback=callback"
-);
+      APPS_SCRIPT_URL +
+      "?cel=" + numero52 +
+      "&callback=callback"
+    );
 
-// 👉 ESPERAR hasta que llegue la respuesta (esto es lo que faltaba)
-await new Promise(resolve => setTimeout(resolve, 800));
+    // Esperar a que llegue la respuesta (muy importante)
+    await new Promise(resolve => setTimeout(resolve, 900));
 
-const data = window.ultimoResultado;
-
+    const data = window.ultimoResultado;
 
     if (!data || !data.existe) {
       document.getElementById("mensaje").innerText =
         "❌ Tu número no está autorizado.";
+      log("⚠️ Resultado final: NO AUTORIZADO");
       return;
     }
 
-    // Si existe → mandar OTP por Firebase
+    log("✅ Número AUTORIZADO según Sheets");
+
+    // Mandar OTP por Firebase
     firebase.auth().signInWithPhoneNumber(
       telefonoGlobal,
       window.recaptchaVerifier
@@ -106,11 +127,13 @@ const data = window.ultimoResultado;
       confirmationResult = result;
       document.getElementById("mensaje").innerText =
         "📩 Código enviado por SMS.";
+      log("📩 SMS enviado por Firebase");
     });
 
   } catch (e) {
     document.getElementById("mensaje").innerText =
-      "❌ Error al consultar la base de datos.";
+      "Error al consultar la base de datos.";
+    log("❌ ERROR: " + e);
   }
 }
 
@@ -125,22 +148,19 @@ async function verificarCodigo() {
 
   try {
     await confirmationResult.confirm(codigo);
+    log("✅ Código SMS correcto");
 
-    const telParaSheet = telefonoGlobal.replace("+", ""); 
-    // "+5255..." → "5255..."
+    const telParaSheet = telefonoGlobal.replace("+", "");
 
-    document.getElementById("mensaje").innerText =
-      "Verificando acceso final...";
+    log("🔍 Buscando link con: " + telParaSheet);
 
-    // Limpiar antes de segunda consulta
-    window.ultimoResultado = null;
-
-    // Segunda consulta para obtener el link
     await fetch(
       APPS_SCRIPT_URL +
       "?cel=" + telParaSheet +
       "&callback=callback"
     );
+
+    await new Promise(resolve => setTimeout(resolve, 900));
 
     const data = window.ultimoResultado;
 
@@ -165,5 +185,3 @@ async function verificarCodigo() {
 
 </body>
 </html>
-
-
