@@ -24,11 +24,13 @@ input, button { display:block; margin:10px 0; padding:8px; }
 <script>
 const APPS_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbwB4LqY84fyboA-F-XvPGAcULplruxRDT6s7ucriDW7hoLV2Q13DVxzb8COeYk-YK8hOw/exec";
 
+const mensaje = document.getElementById("mensaje");
+
 function log(msg){
-  document.getElementById("mensaje").innerText += msg + "\n";
+  mensaje.innerText += msg + "\n";
 }
 
-// Función para habilitar/deshabilitar input y botón del código
+// Habilitar/deshabilitar input y botón del código
 function setCodigoEnabled(enabled){
   document.getElementById("codigo").disabled = !enabled;
   document.getElementById("btnVerificar").disabled = !enabled;
@@ -39,15 +41,20 @@ function setCodigoEnabled(enabled){
 
 async function enviarCodigo(){
   const email = document.getElementById("email").value.trim();
-  if(!email){ log("❌ Escribe tu correo"); return; }
+  if(!email){ 
+    mensaje.innerText = "❌ Escribe tu correo\n";
+    return; 
+  }
 
-  log("📤 Enviando código por correo...");
+  // Limpiamos todo el log y mostramos enviando código
+  mensaje.innerText = "📤 Enviando código por correo...\n";
+
   try{
     const resp = await fetch(APPS_SCRIPT_URL + "?email=" + encodeURIComponent(email));
     const data = await resp.json();
     if(data.ok){
       log("✅ Código enviado al correo: " + email);
-      setCodigoEnabled(true); // Habilitamos input y botón del código
+      setCodigoEnabled(true);
     } else {
       log("❌ Error: " + data.mensaje);
       setCodigoEnabled(false);
@@ -61,13 +68,17 @@ async function enviarCodigo(){
 async function verificarCodigo(){
   const email = document.getElementById("email").value.trim();
   const codigo = document.getElementById("codigo").value.trim();
-  const mensaje = document.getElementById("mensaje");
   if(!email || !codigo){ 
     log("❌ Completa correo y código"); 
     return; 
   }
 
-  log("🔄 Verificando código...");
+  // Guardamos los mensajes previos de envío de correo
+  let logPrevio = mensaje.innerText.split("\n").filter(line => line.startsWith("📤") || line.startsWith("✅ Código enviado")).join("\n");
+
+  // Mostramos "verificando código..."
+  mensaje.innerText = logPrevio + "\n🔄 Verificando código...\n";
+
   try{
     const resp = await fetch(APPS_SCRIPT_URL, {
       method:"POST",
@@ -75,33 +86,34 @@ async function verificarCodigo(){
       body:`email=${encodeURIComponent(email)}&codigo=${encodeURIComponent(codigo)}`
     });
     const data = await resp.json();
+
     if(data.ok){
-      log("✅ Código correcto");
+      // Reemplazamos "🔄 Verificando código..." por ✅ Código correcto
+      mensaje.innerText = logPrevio + "\n✅ Código correcto\n";
 
       // Crear enlace con emoji de ojo y texto
-      const linkText = "👁️ Ver recibos";
       const a = document.createElement("a");
       a.href = data.link;
       a.target = "_blank";
-      a.innerText = linkText;
-
+      a.innerText = "👁️ Ver recibos";
       mensaje.appendChild(a);
       mensaje.appendChild(document.createElement("br"));
 
       // Limpiar inputs y deshabilitar input/botón del código
       setCodigoEnabled(false);
       document.getElementById("email").value = "";
+
     } else {
-      log("❌ " + data.mensaje);
-      // No hacemos nada: input y botón siguen habilitados para reintentar
+      // Reemplazamos "🔄 Verificando código..." por ❌ Código incorrecto
+      mensaje.innerText = logPrevio + "\n❌ " + data.mensaje + "\n";
+      // Input y botón siguen habilitados para reintento
     }
   } catch(e){
-    log("❌ Error al verificar el código: " + e);
-    // No hacemos nada: input y botón siguen habilitados
+    mensaje.innerText = logPrevio + "\n❌ Error al verificar el código: " + e + "\n";
   }
 }
 
-// Al cargar la página, aseguramos que el código esté deshabilitado
+// Al cargar la página, input y botón del código deshabilitados
 setCodigoEnabled(false);
 </script>
 
