@@ -1,74 +1,88 @@
 <!DOCTYPE html>
 <html>
 <head>
-<meta charset="utf-8">
-<title>OTP por correo</title>
-<style>
-body{font-family:Arial;margin:40px;}
-input,button{display:block;margin:10px 0;padding:8px;}
-#mensaje{margin-top:20px;background:#f2f2f2;padding:10px;white-space:pre-line;border:1px solid #ccc;}
-</style>
+  <meta charset="utf-8">
+  <title>Acceso con código por correo</title>
+  <style>
+    body { font-family: Arial; margin:40px; }
+    input, button { display:block; margin:10px 0; padding:8px; width:300px; }
+    #mensaje {
+      margin-top:20px;
+      background:#f2f2f2;
+      padding:10px;
+      white-space: pre-line;
+      border:1px solid #ccc;
+    }
+  </style>
 </head>
 <body>
 
 <h2>Acceso con código por correo</h2>
 
-<input id="email" placeholder="Correo institucional">
+<input id="email" placeholder="Escribe tu correo">
 <button onclick="enviarCodigo()">Enviar código</button>
 
-<input id="codigo" placeholder="Código recibido">
+<br>
+
+<input id="codigo" placeholder="Escribe el código recibido">
 <button onclick="verificarCodigo()">Verificar código</button>
 
-<h3>Registro:</h3>
+<h3>Registro de sistema:</h3>
 <p id="mensaje"></p>
 
 <script>
-const APPS_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbzwMMQtUggCkgcTVBt_ZPeMq74B3CSq0L_wgRSSuJCoV2VVJpZiAdYGXo3_J8IykVdrtA/exec";
+const APPS_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbx3-06UCQorPkEcD0tYLc9_ZQ0H9g_ORkaSxasfmQ42dbdaTgmihe8CGcStf9M_lrav0Q/exec";
 
-function log(msg){document.getElementById("mensaje").innerText += msg+"\n";}
+let codigoGenerado = null; // código enviado
+let correoGlobal = "";
 
+// función para logs
+function log(msg){
+  document.getElementById("mensaje").innerText += "\n" + msg;
+}
+
+// -------------------- ENVIAR CÓDIGO --------------------
 function enviarCodigo(){
-  document.getElementById("mensaje").innerText="";
+  document.getElementById("mensaje").innerText = "";
   const email = document.getElementById("email").value.trim();
   if(!email){ log("❌ Escribe un correo"); return; }
 
+  correoGlobal = email;
   log("📤 Enviando código por correo...");
 
   const cb = "cb" + Date.now();
   window[cb] = function(data){
-    if(data.enviado) log("✅ Código enviado. Revisa tu correo.");
-    else log("❌ Error: " + data.error);
-    delete window[cb];
-  };
-
-  const s = document.createElement("script");
-  s.src = `${APPS_SCRIPT_URL}?email=${encodeURIComponent(email)}&callback=${cb}`;
-  document.body.appendChild(s);
-  s.remove();
-}
-
-function verificarCodigo(){
-  const email = document.getElementById("email").value.trim();
-  const codigo = document.getElementById("codigo").value.trim();
-  if(!email || !codigo){ log("❌ Escribe correo y código"); return; }
-
-  log("🔄 Verificando código...");
-
-  const cb = "cb" + Date.now();
-  window[cb] = function(data){
-    if(data.existe){
-      log("✅ Código correcto. Link:");
-      log(data.link);
+    if(data.enviado){
+      codigoGenerado = data.codigo; // guardamos código temporalmente
+      log("✅ Código enviado. Revisa tu correo (válido 2 min).");
     } else {
-      log("❌ " + (data.error || "Código incorrecto o vencido"));
+      log("❌ Error al enviar código: " + (data.error || "desconocido"));
     }
     delete window[cb];
+    document.body.removeChild(script);
   };
 
-  const s = document.createElement("script");
-  s.src = `${APPS_SCRIPT_URL}?email=${encodeURIComponent(email)}&codigo=${codigo}&callback=${cb}`;
-  document.body.appendChild(s);
-  s.remove();
+  const script = document.createElement("script");
+  script.src = `${APPS_SCRIPT_URL}?email=${encodeURIComponent(email)}&callback=${cb}`;
+  document.body.appendChild(script);
+}
+
+// -------------------- VERIFICAR CÓDIGO --------------------
+function verificarCodigo(){
+  const codigo = document.getElementById("codigo").value.trim();
+  if(!codigoGenerado){
+    log("❌ Primero solicita el código.");
+    return;
+  }
+  if(codigo !== codigoGenerado){
+    log("❌ Código incorrecto o expirado.");
+    return;
+  }
+
+  log("✅ Código correcto.");
+  
+  // Mostrar link de Drive (ejemplo)
+  log("🔗 Aquí está tu archivo: https://drive.google.com/tu-enlace-aqui");
 }
 </script>
 
