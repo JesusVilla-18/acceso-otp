@@ -2,10 +2,7 @@
 <html>
 <head>
   <meta charset="utf-8">
-  <title>Acceso con OTP</title>
-
-  <script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-app-compat.js"></script>
-  <script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-auth-compat.js"></script>
+  <title>Acceso con OTP - Prueba</title>
 
   <style>
     body { font-family: Arial; margin: 40px; }
@@ -21,7 +18,7 @@
 </head>
 <body>
 
-<h2>Acceso con código SMS</h2>
+<h2>Acceso con código SMS (Prueba)</h2>
 
 <input id="telefono" placeholder="Escribe tu celular (10 dígitos)">
 <button id="enviarCodigo" onclick="enviarCodigo()">Enviar código</button>
@@ -35,59 +32,52 @@
 <p id="mensaje"></p>
 
 <script>
-// ======= FIREBASE =======
-const firebaseConfig = {
-  apiKey: "AIzaSyCOxPGwuNYUqE_rmDeawt_x_lsVMNSpx6w",
-  authDomain: "acceso-drive-otp-c13fb.firebaseapp.com",
-  projectId: "acceso-drive-otp-c13fb",
-  storageBucket: "acceso-drive-otp-c13fb.firebasestorage.app",
-  messagingSenderId: "620751699211",
-  appId: "1:620751699211:web:79811953dfef547664f60e",
-  measurementId: "G-CVTNV4G66W"
-};
-
-firebase.initializeApp(firebaseConfig);
-
-// ======= TU APPS SCRIPT (EL QUE FUNCIONA) =======
+// ======= TU APPS SCRIPT =======
 const APPS_SCRIPT_URL =
 "https://script.google.com/macros/s/AKfycbykxvJV31sMMXXF_NoxqVLqqAXtk3KVbyP0zsNogi3KedFQK3hF0EWg312t2AiWC-Qymg/exec";
 
-window.recaptchaVerifier = new firebase.auth.RecaptchaVerifier('enviarCodigo', {
-  'size': 'invisible'
-});
-
+// ======= VARIABLES =======
 let confirmationResult;
 let telefonoGlobal = "";
 
+// Logs en pantalla
 function log(msg){
   document.getElementById("mensaje").innerText += "\n" + msg;
 }
 
+// Consulta tu Sheet
 async function consultarSheets(numero){
   const url = `${APPS_SCRIPT_URL}?cel=${numero}`;
 
   log("🔗 URL enviada:");
   log(url);
 
-  const resp = await fetch(url);
-  const texto = await resp.text();
+  try {
+    const resp = await fetch(url);
+    const texto = await resp.text();
 
-  log("📥 RESPUESTA CRUDA:");
-  log(texto);
+    log("📥 RESPUESTA CRUDA:");
+    log(texto);
 
-  const data = JSON.parse(texto); // <-- aquí ya sabemos que SÍ es JSON válido
-  log("✅ JSON interpretado:");
-  log(JSON.stringify(data, null, 2));
+    const data = JSON.parse(texto);
+    log("✅ JSON interpretado:");
+    log(JSON.stringify(data, null, 2));
 
-  return data;
+    return data;
+  } catch(e){
+    log("❌ ERROR al consultar Apps Script:");
+    log(e.toString());
+    return { existe: false };
+  }
 }
 
+// Enviar código (simulado para número de prueba)
 async function enviarCodigo() {
   document.getElementById("mensaje").innerText = "";
 
   let tel = document.getElementById("telefono").value.trim();
 
-  if (tel.length !== 10 || isNaN(tel)) {
+  if(tel.length !== 10 || isNaN(tel)){
     log("❌ Escribe 10 dígitos válidos.");
     return;
   }
@@ -96,59 +86,61 @@ async function enviarCodigo() {
   const numeroParaSheet = "52" + tel;
 
   log("📞 Teléfono escrito: " + tel);
-  log("➡️ Para Firebase: " + telefonoGlobal);
   log("➡️ Para Sheets: " + numeroParaSheet);
 
-  try {
-    log("🔄 Consultando Apps Script...");
+  log("🔄 Consultando Apps Script...");
+  const data = await consultarSheets(numeroParaSheet);
 
-    const data = await consultarSheets(numeroParaSheet);
-
-    if (!data.existe) {
-      log("⚠️ Resultado final: NO AUTORIZADO");
-      return;
-    }
-
-    log("✅ AUTORIZADO — enviando SMS...");
-
-    confirmationResult = await firebase.auth()
-      .signInWithPhoneNumber(telefonoGlobal, window.recaptchaVerifier);
-
-    log("📩 Código enviado por SMS.");
-
-  } catch (e) {
-    console.error(e);
-    log("❌ ERROR REAL DE SISTEMA:");
-    log(e.toString());
+  if(!data.existe){
+    log("⚠️ Resultado final: NO AUTORIZADO");
+    return;
   }
+
+  log("✅ AUTORIZADO");
+
+  // Número de prueba
+  if(telefonoGlobal === "+525540013399"){
+    log("ℹ️ Número de prueba detectado — código de prueba: 123456");
+    confirmationResult = {
+      confirm: async function(codigo){
+        if(codigo === "123456") return true;
+        else throw new Error("Código incorrecto");
+      }
+    };
+    log("✅ Código de prueba listo para verificar.");
+    return;
+  }
+
+  // Aquí se pondría el envío real por Firebase (requiere facturación)
+  log("⚠️ Para números reales se requiere Firebase con facturación.");
 }
 
+// Verificar código
 async function verificarCodigo() {
   let codigo = document.getElementById("codigo").value.trim();
 
-  if (!confirmationResult) {
-    log("Primero solicita el código.");
+  if(!confirmationResult){
+    log("❌ Primero solicita el código.");
     return;
   }
 
   try {
     await confirmationResult.confirm(codigo);
+    log("✅ Código correcto.");
 
     const telParaSheet = telefonoGlobal.replace("+", "");
-
     log("🔁 Reconsultando Sheets con: " + telParaSheet);
 
     const data = await consultarSheets(telParaSheet);
 
-    if (!data.existe) {
+    if(!data.existe){
       log("❌ Número no autorizado.");
       return;
     }
 
-    document.getElementById("mensaje").innerHTML +=
-      "\n\n✅ Código correcto.\n🔗 Link: " + data.link;
-
-  } catch (error) {
+    log("🔗 Link obtenido: " + data.link);
+    log("✅ Acceso completo.");
+  } catch(e){
     log("❌ Código incorrecto.");
   }
 }
@@ -156,4 +148,3 @@ async function verificarCodigo() {
 
 </body>
 </html>
-
