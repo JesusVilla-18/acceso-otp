@@ -2,66 +2,73 @@
 <html>
 <head>
 <meta charset="utf-8">
-<title>Acceso con correo OTP</title>
+<title>Acceso OTP</title>
 <style>
-body{font-family:Arial;margin:40px;}
-input,button{display:block;margin:10px 0;padding:8px;}
-#mensaje{margin-top:20px;white-space:pre-line;border:1px solid #ccc;padding:10px;background:#f2f2f2;}
-a{color:blue;}
+body { font-family: Arial; margin:40px; }
+input, button { display:block; margin:10px 0; padding:8px; }
+#mensaje { margin-top:20px; white-space: pre-line; padding:10px; border:1px solid #ccc; background:#f2f2f2; }
 </style>
 </head>
 <body>
 
-<h2>Acceso con correo</h2>
+<h2>Acceso con código OTP por correo</h2>
+
 <input id="email" placeholder="Escribe tu correo">
 <button onclick="enviarCodigo()">Enviar código</button>
 
-<br>
 <input id="codigo" placeholder="Escribe el código recibido">
 <button onclick="verificarCodigo()">Verificar</button>
 
 <p id="mensaje"></p>
 
 <script>
-const APPS_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbxPuaZUnsgZpL9dFyLPtM4ZqeF_XKA1zGHZf3EMkTMdkAINgEA0PZofYGNYqtXX-3t-mw/exec";
+const APPS_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbwB4LqY84fyboA-F-XvPGAcULplruxRDT6s7ucriDW7hoLV2Q13DVxzb8COeYk-YK8hOw/exec";
 
-function log(msg){document.getElementById("mensaje").innerText += msg+"\n";}
+function log(msg){ document.getElementById("mensaje").innerText += msg + "\n"; }
 
-function enviarCodigo(){
+async function enviarCodigo(){
   document.getElementById("mensaje").innerText = "";
   const email = document.getElementById("email").value.trim();
-  if(!email){log("❌ Ingresa un correo");return;}
+  if(!email){ log("❌ Escribe tu correo"); return; }
 
   log("📤 Enviando código por correo...");
-  const script = document.createElement("script");
-  script.src = `${APPS_SCRIPT_URL}?email=${encodeURIComponent(email)}&callback=callbackEnviar`;
-  document.body.appendChild(script);
-}
-
-function callbackEnviar(data){
-  if(data.ok){
-    log("✅ " + data.mensaje);
-  } else {
-    log("❌ " + data.mensaje);
+  try{
+    const resp = await fetch(APPS_SCRIPT_URL + "?email=" + encodeURIComponent(email));
+    const data = await resp.json();
+    if(data.ok){
+      log("✅ Código enviado al correo: " + email);
+      log("DEBUG: " + JSON.stringify(data.debug, null,2));
+    } else {
+      log("❌ Error: " + data.mensaje);
+      log("DEBUG: " + JSON.stringify(data.debug || {}, null,2));
+    }
+  } catch(e){
+    log("❌ Error al enviar el código: " + e);
   }
 }
 
-function verificarCodigo(){
+async function verificarCodigo(){
   const email = document.getElementById("email").value.trim();
   const codigo = document.getElementById("codigo").value.trim();
-  if(!email || !codigo){ log("❌ Ingresa correo y código"); return; }
+  if(!email || !codigo){ log("❌ Completa correo y código"); return; }
 
-  const script = document.createElement("script");
-  script.src = `${APPS_SCRIPT_URL}?email=${encodeURIComponent(email)}&codigo=${encodeURIComponent(codigo)}&callback=callbackVerificar`;
-  document.body.appendChild(script);
-}
-
-function callbackVerificar(data){
-  if(data.ok){
-    log("✅ Código correcto!");
-    document.getElementById("mensaje").innerHTML += `<br>🔗 Link: <a href="${data.link}" target="_blank">${data.link}</a>`;
-  } else {
-    log("❌ " + data.mensaje);
+  log("🔄 Verificando código...");
+  try{
+    const resp = await fetch(APPS_SCRIPT_URL, {
+      method:"POST",
+      headers:{"Content-Type":"application/x-www-form-urlencoded"},
+      body:`email=${encodeURIComponent(email)}&codigo=${encodeURIComponent(codigo)}`
+    });
+    const data = await resp.json();
+    log(JSON.stringify(data, null, 2));
+    if(data.ok){
+      log("✅ Código correcto");
+      log("🔗 Link: " + data.link);
+    } else {
+      log("❌ " + data.mensaje);
+    }
+  } catch(e){
+    log("❌ Error al verificar el código: " + e);
   }
 }
 </script>
