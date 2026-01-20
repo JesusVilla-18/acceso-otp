@@ -13,85 +13,64 @@
 
 <h2>Acceso con código por correo</h2>
 
-<input id="email" placeholder="Escribe tu correo">
+<input id="email" placeholder="Escribe tu correo institucional">
 <button onclick="enviarCodigo()">Enviar código</button>
 
-<br>
-
 <input id="codigo" placeholder="Escribe el código recibido">
-<button onclick="verificarCodigo()">Verificar</button>
+<button onclick="verificarCodigo()">Verificar código</button>
 
+<h3>Registro:</h3>
 <p id="mensaje"></p>
 
 <script>
-const APPS_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbyFve7wgPN4H4FYcExoP83DkiE09LlFbF9VbOjbJoPE9l8pZqow4KlUFuz7e3ri3rNiQg/exec";
-
-// Variables en memoria
-let codigoGenerado = "";
-let linkFinal = "";
+const APPS_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbzTd3IUKTiL6_3krO6DlufJuy6N3a-wO6FSUSdr2u0bQ_PkrWftu0olNwe6m5Ja8So2vw/exec";
 
 function log(msg){
-  document.getElementById("mensaje").innerText += "\n" + msg;
+  const p = document.getElementById("mensaje");
+  p.innerText += msg + "\n";
 }
 
 async function enviarCodigo(){
   document.getElementById("mensaje").innerText = "";
   const email = document.getElementById("email").value.trim();
-
-  if(!email.includes("@")){
-    log("❌ Escribe un correo válido");
-    return;
-  }
+  if(!email){ log("❌ Escribe un correo"); return; }
 
   log("📤 Enviando código por correo...");
 
-  try {
-    // Llamamos al Apps Script para generar código y enviar email
-    const resp = await fetch(`${APPS_SCRIPT_URL}?email=${encodeURIComponent(email)}`);
-    const data = await resp.json();
-
-    if(!data.existe){
-      log("❌ Este correo no está autorizado.");
-      return;
-    }
-
-    codigoGenerado = data.codigo;  // guardamos el código generado
-    linkFinal = data.link;          // guardamos el link del Sheet
-    log(`✅ Código enviado a ${email}.`);
-    log("⏱ Código válido por 2 minutos.");
-
-    // Caducidad automática del código
-    setTimeout(()=> {
-      codigoGenerado = "";
-      log("⚠️ Código expirado.");
-    }, 120000); // 2 minutos
-
+  try{
+    await fetch(`${APPS_SCRIPT_URL}?email=${encodeURIComponent(email)}&callback=callback`);
+    log("✅ Código enviado. Revisa tu correo.");
   } catch(e){
-    console.error(e);
-    log("❌ Error al enviar código.");
+    log("❌ Error al enviar código: " + e);
   }
 }
 
-function verificarCodigo(){
-  const codigoUsuario = document.getElementById("codigo").value.trim();
+async function verificarCodigo(){
+  const email = document.getElementById("email").value.trim();
+  const codigo = document.getElementById("codigo").value.trim();
+  if(!email || !codigo){ log("❌ Escribe correo y código"); return; }
 
-  if(codigoUsuario === ""){
-    log("❌ Escribe el código recibido.");
-    return;
-  }
+  log("🔄 Verificando código...");
 
-  if(codigoGenerado === ""){
-    log("❌ Código expirado o no solicitado.");
-    return;
-  }
+  try{
+    const callbackName = "cb" + Date.now();
+    window[callbackName] = function(data){
+      if(data.existe){
+        log("✅ Código correcto. Link:");
+        log(data.link);
+      } else {
+        log("❌ Código incorrecto o vencido");
+      }
+      delete window[callbackName];
+    };
 
-  if(codigoUsuario === codigoGenerado){
-    log("✅ Código correcto!");
-    log("🔗 Aquí está tu enlace: " + linkFinal);
-    // Limpiamos código para que no se use de nuevo
-    codigoGenerado = "";
-  } else {
-    log("❌ Código incorrecto.");
+    const script = document.createElement("script");
+    script.src = `${APPS_SCRIPT_URL}?email=${encodeURIComponent(email)}&codigo=${codigo}&callback=${callbackName}`;
+    document.body.appendChild(script);
+    script.remove();
+
+  } catch(e){
+    log("❌ Error al verificar código: " + e);
   }
 }
 </script>
