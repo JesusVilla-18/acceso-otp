@@ -58,7 +58,6 @@ async function verificarCodigo(){
       body:`email=${encodeURIComponent(email)}&codigo=${encodeURIComponent(codigo)}`
     });
     const data = await resp.json();
-    log(JSON.stringify(data, null, 2));
     if(data.ok){
       log("✅ Código correcto");
       log("🔗 Link: " + data.link);
@@ -73,4 +72,5 @@ async function verificarCodigo(){
 
 </body>
 </html>
+
 
