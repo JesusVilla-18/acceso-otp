@@ -2,7 +2,10 @@
 <html>
 <head>
   <meta charset="utf-8">
-  <title>Acceso con OTP - Prueba</title>
+  <title>Acceso con OTP</title>
+
+  <script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-auth-compat.js"></script>
 
   <style>
     body { font-family: Arial; margin: 40px; }
@@ -18,7 +21,7 @@
 </head>
 <body>
 
-<h2>Acceso con código SMS (Prueba)</h2>
+<h2>Acceso con código SMS</h2>
 
 <input id="telefono" placeholder="Escribe tu celular (10 dígitos)">
 <button id="enviarCodigo" onclick="enviarCodigo()">Enviar código</button>
@@ -32,53 +35,71 @@
 <p id="mensaje"></p>
 
 <script>
-// ======= TU APPS SCRIPT =======
-const APPS_SCRIPT_URL =
-"https://script.google.com/macros/s/AKfycbykxvJV31sMMXXF_NoxqVLqqAXtk3KVbyP0zsNogi3KedFQK3hF0EWg312t2AiWC-Qymg/exec";
+// ======= FIREBASE =======
+const firebaseConfig = {
+  apiKey: "TU_API_KEY",
+  authDomain: "TU_AUTH_DOMAIN",
+  projectId: "TU_PROJECT_ID",
+  storageBucket: "TU_BUCKET",
+  messagingSenderId: "TU_MESSAGING_ID",
+  appId: "TU_APP_ID",
+  measurementId: "TU_MEASUREMENT_ID"
+};
 
-// ======= VARIABLES =======
+firebase.initializeApp(firebaseConfig);
+
+// ======= APPS SCRIPT =======
+const APPS_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbwUfoXe3Dv0HzBsGArXPWPyWdL0NFC_PrWo_DqfdXjQT25UxLsPqCHmATtIMc74WOSN/exec";
+
+window.recaptchaVerifier = new firebase.auth.RecaptchaVerifier('enviarCodigo', {
+  'size': 'invisible'
+});
+
 let confirmationResult;
 let telefonoGlobal = "";
 
-// Logs en pantalla
+// Registro en pantalla
 function log(msg){
   document.getElementById("mensaje").innerText += "\n" + msg;
 }
 
-// Consulta tu Sheet
-async function consultarSheets(numero){
-  const url = `${APPS_SCRIPT_URL}?cel=${numero}`;
-
-  log("🔗 URL enviada:");
-  log(url);
-
-  try {
-    const resp = await fetch(url);
-    const texto = await resp.text();
-
-    log("📥 RESPUESTA CRUDA:");
-    log(texto);
-
-    const data = JSON.parse(texto);
-    log("✅ JSON interpretado:");
-    log(JSON.stringify(data, null, 2));
-
-    return data;
-  } catch(e){
-    log("❌ ERROR al consultar Apps Script:");
-    log(e.toString());
-    return { existe: false };
-  }
+// JSONP: se ejecuta automáticamente cuando Apps Script responde
+function jsonpCallback(data){
+  window.jsonpData = data;
 }
 
-// Enviar código (simulado para número de prueba)
+// Llamada JSONP
+function llamarJSONP(numero){
+  return new Promise((resolve, reject) => {
+    window.jsonpData = null;
+
+    const script = document.createElement('script');
+    script.src = `${APPS_SCRIPT_URL}?cel=${numero}&callback=jsonpCallback`;
+    script.onerror = () => reject("No se pudo consultar la base de datos");
+    document.body.appendChild(script);
+
+    let intentos = 0;
+    const interval = setInterval(() => {
+      if(window.jsonpData){
+        clearInterval(interval);
+        document.body.removeChild(script);
+        resolve(window.jsonpData);
+      } else if(intentos++ > 50){ // timeout ~5s
+        clearInterval(interval);
+        document.body.removeChild(script);
+        reject("Tiempo de espera agotado");
+      }
+    }, 100);
+  });
+}
+
+// ==================== FUNCIONES PRINCIPALES ====================
 async function enviarCodigo() {
   document.getElementById("mensaje").innerText = "";
 
   let tel = document.getElementById("telefono").value.trim();
-
   if(tel.length !== 10 || isNaN(tel)){
-    log("❌ Escribe 10 dígitos válidos.");
+    log("❌ Escribe un celular válido de 10 dígitos.");
     return;
   }
 
@@ -86,61 +107,56 @@ async function enviarCodigo() {
   const numeroParaSheet = "52" + tel;
 
   log("📞 Teléfono escrito: " + tel);
+  log("➡️ Para Firebase: " + telefonoGlobal);
   log("➡️ Para Sheets: " + numeroParaSheet);
-
   log("🔄 Consultando Apps Script...");
-  const data = await consultarSheets(numeroParaSheet);
-
-  if(!data.existe){
-    log("⚠️ Resultado final: NO AUTORIZADO");
-    return;
-  }
-
-  log("✅ AUTORIZADO");
-
-  // Número de prueba
-  if(telefonoGlobal === "+525540013399"){
-    log("ℹ️ Número de prueba detectado — código de prueba: 123456");
-    confirmationResult = {
-      confirm: async function(codigo){
-        if(codigo === "123456") return true;
-        else throw new Error("Código incorrecto");
-      }
-    };
-    log("✅ Código de prueba listo para verificar.");
-    return;
-  }
-
-  // Aquí se pondría el envío real por Firebase (requiere facturación)
-  log("⚠️ Para números reales se requiere Firebase con facturación.");
-}
-
-// Verificar código
-async function verificarCodigo() {
-  let codigo = document.getElementById("codigo").value.trim();
-
-  if(!confirmationResult){
-    log("❌ Primero solicita el código.");
-    return;
-  }
 
   try {
+    const data = await llamarJSONP(numeroParaSheet);
+
+    if(!data || !data.existe){
+      log("⚠️ Resultado final: NO AUTORIZADO");
+      return;
+    }
+
+    log("✅ AUTORIZADO — enviando SMS...");
+
+    confirmationResult = await firebase.auth()
+      .signInWithPhoneNumber(telefonoGlobal, window.recaptchaVerifier);
+
+    log("📩 Código enviado por SMS.");
+
+  } catch(e){
+    console.error(e);
+    log("❌ ERROR REAL DE SISTEMA:");
+    log(e.toString());
+  }
+}
+
+async function verificarCodigo() {
+  let codigo = document.getElementById("codigo").value.trim();
+  if(!confirmationResult){
+    log("Primero solicita el código.");
+    return;
+  }
+
+  try{
     await confirmationResult.confirm(codigo);
-    log("✅ Código correcto.");
 
     const telParaSheet = telefonoGlobal.replace("+", "");
     log("🔁 Reconsultando Sheets con: " + telParaSheet);
 
-    const data = await consultarSheets(telParaSheet);
+    const data = await llamarJSONP(telParaSheet);
 
-    if(!data.existe){
+    if(!data || !data.existe){
       log("❌ Número no autorizado.");
       return;
     }
 
-    log("🔗 Link obtenido: " + data.link);
-    log("✅ Acceso completo.");
-  } catch(e){
+    document.getElementById("mensaje").innerHTML +=
+      "\n\n✅ Código correcto.\n🔗 Link: " + data.link;
+
+  } catch(error){
     log("❌ Código incorrecto.");
   }
 }
