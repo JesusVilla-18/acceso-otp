@@ -37,10 +37,8 @@ async function enviarCodigo(){
     const data = await resp.json();
     if(data.ok){
       log("✅ Código enviado al correo: " + email);
-      log("DEBUG: " + JSON.stringify(data.debug, null,2));
     } else {
       log("❌ Error: " + data.mensaje);
-      log("DEBUG: " + JSON.stringify(data.debug || {}, null,2));
     }
   } catch(e){
     log("❌ Error al enviar el código: " + e);
@@ -75,3 +73,4 @@ async function verificarCodigo(){
 
 </body>
 </html>
+
