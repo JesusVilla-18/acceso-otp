@@ -1,19 +1,25 @@
 <!DOCTYPE html>
 <html>
 <head>
-<meta charset="utf-8">
-<title>Acceso por correo</title>
-<style>
-body { font-family: Arial; margin: 40px; }
-input, button { display:block; margin:10px 0; padding:8px; }
-#mensaje { margin-top:20px; background:#f2f2f2; padding:10px; border:1px solid #ccc; white-space: pre-line; }
-</style>
+  <meta charset="utf-8">
+  <title>Acceso con código por correo</title>
+  <style>
+    body { font-family: Arial; margin: 40px; }
+    input, button { display:block; margin:10px 0; padding:8px; }
+    #mensaje {
+      margin-top:20px;
+      background:#f2f2f2;
+      padding:10px;
+      white-space: pre-line;
+      border: 1px solid #ccc;
+    }
+  </style>
 </head>
 <body>
 
 <h2>Acceso con código por correo</h2>
 
-<input id="email" placeholder="Escribe tu correo">
+<input id="email" placeholder="Escribe tu correo institucional">
 <button onclick="enviarCodigo()">Enviar código</button>
 
 <br>
@@ -21,55 +27,87 @@ input, button { display:block; margin:10px 0; padding:8px; }
 <input id="codigo" placeholder="Escribe el código recibido">
 <button onclick="verificarCodigo()">Verificar</button>
 
-<h3>Registro:</h3>
+<h3>Registro de sistema:</h3>
 <p id="mensaje"></p>
 
 <script>
+// ======= URL DE TU APPS SCRIPT =======
 const APPS_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbyFve7wgPN4H4FYcExoP83DkiE09LlFbF9VbOjbJoPE9l8pZqow4KlUFuz7e3ri3rNiQg/exec";
 
 let emailGlobal = "";
+let codigoGenerado = "";
+let expiracion = null;
 
 function log(msg){
   document.getElementById("mensaje").innerText += "\n" + msg;
 }
 
-async function enviarCodigo() {
+// --- Enviar código ---
+function enviarCodigo(){
   document.getElementById("mensaje").innerText = "";
   const email = document.getElementById("email").value.trim();
-  if (!email.includes("@")) {
+
+  if(!email.includes("@")){
     log("❌ Ingresa un correo válido.");
     return;
   }
+
   emailGlobal = email;
-  log("📤 Enviando código por correo...");
+  log("📤 Verificando correo y enviando código...");
 
-  try {
-    const url = `${APPS_SCRIPT_URL}?email=${encodeURIComponent(email)}&callback=callback`;
-    
-    await fetch(url); // usamos JSONP, la respuesta no nos importa
-    log("✅ Código enviado si el correo estaba autorizado.");
+  // Definimos callback para JSONP
+  window.callback = function(data){
+    if(!data.existe){
+      log("❌ Correo no autorizado.");
+      script.remove();
+      return;
+    }
 
-  } catch(e) {
-    log("❌ Error al consultar la base de datos.");
-    console.error(e);
+    // Generar código de 6 dígitos
+    codigoGenerado = Math.floor(100000 + Math.random()*900000).toString();
+    expiracion = Date.now() + 2*60*1000; // 2 minutos
+
+    // Llamada para enviar correo
+    const correoScript = document.createElement("script");
+    correoScript.src = `${APPS_SCRIPT_URL}?email=${encodeURIComponent(emailGlobal)}&codigo=${codigoGenerado}&callback=callbackCorreo`;
+    document.body.appendChild(correoScript);
+    script.remove();
   }
+
+  // Callback para envío de correo
+  window.callbackCorreo = function(data){
+    if(data.ok){
+      log("✅ Código enviado por correo. Expira en 2 minutos.");
+    } else {
+      log("❌ Error al enviar correo.");
+    }
+    // Eliminamos el script
+    scriptCorreo.remove();
+  }
+
+  const script = document.createElement("script");
+  script.src = `${APPS_SCRIPT_URL}?email=${encodeURIComponent(email)}&callback=callback`;
+  document.body.appendChild(script);
+  const scriptCorreo = script; // referencia para callbackCorreo
 }
 
-async function verificarCodigo() {
-  const codigo = document.getElementById("codigo").value.trim();
-  if (!codigo || !emailGlobal) {
-    log("❌ Primero solicita el código.");
+// --- Verificar código ---
+function verificarCodigo(){
+  const codigoIngresado = document.getElementById("codigo").value.trim();
+  if(!codigoGenerado){
+    log("❌ Primero solicita un código.");
     return;
   }
-
-  try {
-    // Llamada a la función de validación
-    const resp = await fetch(`${APPS_SCRIPT_URL}?email=${encodeURIComponent(emailGlobal)}&codigo=${codigo}&accion=validar`);
-    const texto = await resp.text();
-    log("📥 Resultado de validación: " + texto);
-    // El Apps Script puede devolver true/false
-  } catch(e) {
-    log("❌ Error al verificar código.");
+  if(Date.now() > expiracion){
+    log("❌ El código ha expirado. Solicita uno nuevo.");
+    codigoGenerado = "";
+    return;
+  }
+  if(codigoIngresado === codigoGenerado){
+    log("✅ Código correcto. Acceso permitido.");
+    log("🔗 Aquí tu enlace: https://drive.google.com/tu-archivo");
+  } else {
+    log("❌ Código incorrecto.");
   }
 }
 </script>
