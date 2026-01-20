@@ -2,40 +2,39 @@
 <html>
 <head>
 <meta charset="utf-8">
-<title>Acceso con código</title>
+<title>Acceso con correo OTP</title>
 <style>
-body { font-family: Arial; margin:40px; }
+body { font-family: Arial; margin: 40px; }
 input, button { display:block; margin:10px 0; padding:8px; }
-#mensaje { margin-top:20px; background:#f2f2f2; padding:10px; border:1px solid #ccc; white-space: pre-line;}
-#link { margin-top:10px; }
+#mensaje { margin-top:20px; white-space: pre-line; border:1px solid #ccc; padding:10px; background:#f2f2f2;}
+a { color: blue; }
 </style>
 </head>
 <body>
 
-<h2>Acceso con código por correo</h2>
-
+<h2>Acceso con correo</h2>
 <input id="email" placeholder="Escribe tu correo">
 <button onclick="enviarCodigo()">Enviar código</button>
 
 <br>
-
 <input id="codigo" placeholder="Escribe el código recibido">
 <button onclick="verificarCodigo()">Verificar</button>
 
 <p id="mensaje"></p>
-<div id="link"></div>
 
 <script>
-const APPS_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbwkaCdUIsgbgGE6RAQxOnHUDPhtWH4UuULOZdXxcUamzofQISkypgLx5v1yxVpUiF8MLw/exec";
+const APPS_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbyK2OW0C5emzNhGCSoO0zAnnUU_6ydEAO_eEQ3aeKcjp3RfNOzXDK2DSD7oFlyGo2vF-A/exec";
 
-function log(msg){ document.getElementById("mensaje").innerText += "\n" + msg; }
+let ultimoCodigo = null;
+
+function log(msg){
+  document.getElementById("mensaje").innerText += msg + "\n";
+}
 
 function enviarCodigo(){
-  const email = document.getElementById("email").value.trim();
   document.getElementById("mensaje").innerText = "";
-  document.getElementById("link").innerHTML = "";
-
-  if(!email){ log("❌ Escribe un correo"); return; }
+  const email = document.getElementById("email").value.trim();
+  if(!email) { log("❌ Ingresa un correo"); return; }
 
   log("📤 Enviando código por correo...");
 
@@ -47,7 +46,8 @@ function enviarCodigo(){
 function callbackEnviar(data){
   if(data.ok){
     log("✅ " + data.mensaje);
-  }else{
+    ultimoCodigo = null; // borramos el código anterior para que no pueda usar otro
+  } else {
     log("❌ " + data.mensaje);
   }
 }
@@ -55,9 +55,7 @@ function callbackEnviar(data){
 function verificarCodigo(){
   const email = document.getElementById("email").value.trim();
   const codigo = document.getElementById("codigo").value.trim();
-  document.getElementById("link").innerHTML = "";
-
-  if(!email || !codigo){ log("❌ Llena ambos campos"); return; }
+  if(!email || !codigo){ log("❌ Ingresa correo y código"); return; }
 
   const script = document.createElement("script");
   script.src = `${APPS_SCRIPT_URL}?email=${encodeURIComponent(email)}&codigo=${encodeURIComponent(codigo)}&callback=callbackVerificar`;
@@ -66,9 +64,10 @@ function verificarCodigo(){
 
 function callbackVerificar(data){
   if(data.ok){
-    document.getElementById("link").innerHTML = '🔗 Tu link: <a href="'+data.link+'" target="_blank">'+data.link+'</a>';
-    log("✅ Código correcto");
-  }else{
+    log("✅ Código correcto!");
+    log("🔗 Link: " + data.link);
+    document.getElementById("mensaje").innerHTML += `<br><a href="${data.link}" target="_blank">${data.link}</a>`;
+  } else {
     log("❌ " + data.mensaje);
   }
 }
