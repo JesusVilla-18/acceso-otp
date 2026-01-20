@@ -4,10 +4,10 @@
 <meta charset="utf-8">
 <title>Acceso con correo OTP</title>
 <style>
-body { font-family: Arial; margin: 40px; }
-input, button { display:block; margin:10px 0; padding:8px; }
-#mensaje { margin-top:20px; white-space: pre-line; border:1px solid #ccc; padding:10px; background:#f2f2f2;}
-a { color: blue; }
+body{font-family:Arial;margin:40px;}
+input,button{display:block;margin:10px 0;padding:8px;}
+#mensaje{margin-top:20px;white-space:pre-line;border:1px solid #ccc;padding:10px;background:#f2f2f2;}
+a{color:blue;}
 </style>
 </head>
 <body>
@@ -23,21 +23,16 @@ a { color: blue; }
 <p id="mensaje"></p>
 
 <script>
-const APPS_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbyK2OW0C5emzNhGCSoO0zAnnUU_6ydEAO_eEQ3aeKcjp3RfNOzXDK2DSD7oFlyGo2vF-A/exec";
+const APPS_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbxPuaZUnsgZpL9dFyLPtM4ZqeF_XKA1zGHZf3EMkTMdkAINgEA0PZofYGNYqtXX-3t-mw/exec";
 
-let ultimoCodigo = null;
-
-function log(msg){
-  document.getElementById("mensaje").innerText += msg + "\n";
-}
+function log(msg){document.getElementById("mensaje").innerText += msg+"\n";}
 
 function enviarCodigo(){
   document.getElementById("mensaje").innerText = "";
   const email = document.getElementById("email").value.trim();
-  if(!email) { log("❌ Ingresa un correo"); return; }
+  if(!email){log("❌ Ingresa un correo");return;}
 
   log("📤 Enviando código por correo...");
-
   const script = document.createElement("script");
   script.src = `${APPS_SCRIPT_URL}?email=${encodeURIComponent(email)}&callback=callbackEnviar`;
   document.body.appendChild(script);
@@ -46,7 +41,6 @@ function enviarCodigo(){
 function callbackEnviar(data){
   if(data.ok){
     log("✅ " + data.mensaje);
-    ultimoCodigo = null; // borramos el código anterior para que no pueda usar otro
   } else {
     log("❌ " + data.mensaje);
   }
@@ -65,8 +59,7 @@ function verificarCodigo(){
 function callbackVerificar(data){
   if(data.ok){
     log("✅ Código correcto!");
-    log("🔗 Link: " + data.link);
-    document.getElementById("mensaje").innerHTML += `<br><a href="${data.link}" target="_blank">${data.link}</a>`;
+    document.getElementById("mensaje").innerHTML += `<br>🔗 Link: <a href="${data.link}" target="_blank">${data.link}</a>`;
   } else {
     log("❌ " + data.mensaje);
   }
