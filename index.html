@@ -2,24 +2,18 @@
 <html>
 <head>
   <meta charset="utf-8">
-  <title>Acceso con código por correo</title>
+  <title>Acceso con OTP por correo</title>
   <style>
     body { font-family: Arial; margin: 40px; }
     input, button { display:block; margin:10px 0; padding:8px; }
-    #mensaje {
-      margin-top:20px;
-      background:#f2f2f2;
-      padding:10px;
-      white-space: pre-line;
-      border: 1px solid #ccc;
-    }
+    #mensaje { margin-top:20px; background:#f2f2f2; padding:10px; white-space: pre-line; border: 1px solid #ccc; }
   </style>
 </head>
 <body>
 
 <h2>Acceso con código por correo</h2>
 
-<input id="email" placeholder="Escribe tu correo institucional">
+<input id="email" placeholder="Escribe tu correo">
 <button onclick="enviarCodigo()">Enviar código</button>
 
 <br>
@@ -27,85 +21,75 @@
 <input id="codigo" placeholder="Escribe el código recibido">
 <button onclick="verificarCodigo()">Verificar</button>
 
-<h3>Registro de sistema:</h3>
 <p id="mensaje"></p>
 
 <script>
-// ======= URL DE TU APPS SCRIPT =======
 const APPS_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbyFve7wgPN4H4FYcExoP83DkiE09LlFbF9VbOjbJoPE9l8pZqow4KlUFuz7e3ri3rNiQg/exec";
 
-let emailGlobal = "";
+// Variables en memoria
 let codigoGenerado = "";
-let expiracion = null;
+let linkFinal = "";
 
 function log(msg){
   document.getElementById("mensaje").innerText += "\n" + msg;
 }
 
-// --- Enviar código ---
-function enviarCodigo(){
+async function enviarCodigo(){
   document.getElementById("mensaje").innerText = "";
   const email = document.getElementById("email").value.trim();
 
   if(!email.includes("@")){
-    log("❌ Ingresa un correo válido.");
+    log("❌ Escribe un correo válido");
     return;
   }
 
-  emailGlobal = email;
-  log("📤 Verificando correo y enviando código...");
+  log("📤 Enviando código por correo...");
 
-  // Definimos callback para JSONP
-  window.callback = function(data){
+  try {
+    // Llamamos al Apps Script para generar código y enviar email
+    const resp = await fetch(`${APPS_SCRIPT_URL}?email=${encodeURIComponent(email)}`);
+    const data = await resp.json();
+
     if(!data.existe){
-      log("❌ Correo no autorizado.");
-      script.remove();
+      log("❌ Este correo no está autorizado.");
       return;
     }
 
-    // Generar código de 6 dígitos
-    codigoGenerado = Math.floor(100000 + Math.random()*900000).toString();
-    expiracion = Date.now() + 2*60*1000; // 2 minutos
+    codigoGenerado = data.codigo;  // guardamos el código generado
+    linkFinal = data.link;          // guardamos el link del Sheet
+    log(`✅ Código enviado a ${email}.`);
+    log("⏱ Código válido por 2 minutos.");
 
-    // Llamada para enviar correo
-    const correoScript = document.createElement("script");
-    correoScript.src = `${APPS_SCRIPT_URL}?email=${encodeURIComponent(emailGlobal)}&codigo=${codigoGenerado}&callback=callbackCorreo`;
-    document.body.appendChild(correoScript);
-    script.remove();
+    // Caducidad automática del código
+    setTimeout(()=> {
+      codigoGenerado = "";
+      log("⚠️ Código expirado.");
+    }, 120000); // 2 minutos
+
+  } catch(e){
+    console.error(e);
+    log("❌ Error al enviar código.");
   }
-
-  // Callback para envío de correo
-  window.callbackCorreo = function(data){
-    if(data.ok){
-      log("✅ Código enviado por correo. Expira en 2 minutos.");
-    } else {
-      log("❌ Error al enviar correo.");
-    }
-    // Eliminamos el script
-    scriptCorreo.remove();
-  }
-
-  const script = document.createElement("script");
-  script.src = `${APPS_SCRIPT_URL}?email=${encodeURIComponent(email)}&callback=callback`;
-  document.body.appendChild(script);
-  const scriptCorreo = script; // referencia para callbackCorreo
 }
 
-// --- Verificar código ---
 function verificarCodigo(){
-  const codigoIngresado = document.getElementById("codigo").value.trim();
-  if(!codigoGenerado){
-    log("❌ Primero solicita un código.");
+  const codigoUsuario = document.getElementById("codigo").value.trim();
+
+  if(codigoUsuario === ""){
+    log("❌ Escribe el código recibido.");
     return;
   }
-  if(Date.now() > expiracion){
-    log("❌ El código ha expirado. Solicita uno nuevo.");
+
+  if(codigoGenerado === ""){
+    log("❌ Código expirado o no solicitado.");
+    return;
+  }
+
+  if(codigoUsuario === codigoGenerado){
+    log("✅ Código correcto!");
+    log("🔗 Aquí está tu enlace: " + linkFinal);
+    // Limpiamos código para que no se use de nuevo
     codigoGenerado = "";
-    return;
-  }
-  if(codigoIngresado === codigoGenerado){
-    log("✅ Código correcto. Acceso permitido.");
-    log("🔗 Aquí tu enlace: https://drive.google.com/tu-archivo");
   } else {
     log("❌ Código incorrecto.");
   }
