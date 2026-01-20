@@ -70,7 +70,8 @@ button:disabled {
   <input id="email" placeholder="Escribe tu correo">
   <button id="btnEnviar" onclick="enviarCodigo()">Enviar código</button>
 
-  <input id="codigo" placeholder="Escribe el código recibido" disabled>
+  <input id="codigo" placeholder="Escribe el código recibido" disabled
+          type="tel" pattern="[0-9]*" inputmode="numeric">
   <button id="btnVerificar" onclick="verificarCodigo()" disabled>Verificar</button>
 
   <p id="mensaje"></p>
@@ -82,10 +83,16 @@ const mensaje = document.getElementById("mensaje");
 
 // Habilitar/deshabilitar input y botón del código
 function setCodigoEnabled(enabled){
-  document.getElementById("codigo").disabled = !enabled;
-  document.getElementById("btnVerificar").disabled = !enabled;
-  if(!enabled){
-    document.getElementById("codigo").value = "";
+  const inputCodigo = document.getElementById("codigo");
+  const btnVerificar = document.getElementById("btnVerificar");
+  
+  inputCodigo.disabled = !enabled;
+  btnVerificar.disabled = !enabled;
+  
+  if(enabled){
+    inputCodigo.focus(); // cursor automático
+  } else {
+    inputCodigo.value = "";
   }
 }
 
@@ -169,4 +176,5 @@ setCodigoEnabled(false);
 
 </body>
 </html>
+
 
