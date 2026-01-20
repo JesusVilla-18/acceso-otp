@@ -24,7 +24,9 @@ input, button { display:block; margin:10px 0; padding:8px; }
 <script>
 const APPS_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbwB4LqY84fyboA-F-XvPGAcULplruxRDT6s7ucriDW7hoLV2Q13DVxzb8COeYk-YK8hOw/exec";
 
-function log(msg){ document.getElementById("mensaje").innerText += msg + "\n"; }
+function log(msg){
+  document.getElementById("mensaje").innerText += msg + "\n";
+}
 
 async function enviarCodigo(){
   document.getElementById("mensaje").innerText = "";
@@ -48,7 +50,11 @@ async function enviarCodigo(){
 async function verificarCodigo(){
   const email = document.getElementById("email").value.trim();
   const codigo = document.getElementById("codigo").value.trim();
-  if(!email || !codigo){ log("❌ Completa correo y código"); return; }
+  const mensaje = document.getElementById("mensaje");
+  if(!email || !codigo){ 
+    log("❌ Completa correo y código"); 
+    return; 
+  }
 
   log("🔄 Verificando código...");
   try{
@@ -60,7 +66,16 @@ async function verificarCodigo(){
     const data = await resp.json();
     if(data.ok){
       log("✅ Código correcto");
-      log("🔗 Link: " + data.link);
+
+      // Crear enlace con emoji de ojo y texto
+      const linkText = "👁️ Ver recibos";
+      const a = document.createElement("a");
+      a.href = data.link;
+      a.target = "_blank";
+      a.innerText = linkText;
+
+      mensaje.appendChild(a);                   // Agregar enlace
+      mensaje.appendChild(document.createElement("br")); // Salto de línea
     } else {
       log("❌ " + data.mensaje);
     }
@@ -72,5 +87,3 @@ async function verificarCodigo(){
 
 </body>
 </html>
-
-
