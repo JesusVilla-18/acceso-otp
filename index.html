@@ -2,33 +2,82 @@
 <html>
 <head>
 <meta charset="utf-8">
-<title>Mis Recibos de Nómina</title>
+<title>Acceso OTP</title>
+<meta name="viewport" content="width=device-width, initial-scale=1">
+
 <style>
-body { font-family: Arial; margin:40px; }
-input, button { display:block; margin:10px 0; padding:8px; }
-#mensaje { margin-top:20px; white-space: pre-line; padding:10px; border:1px solid #ccc; background:#f2f2f2; }
+/* ===== Estilos generales ===== */
+body { 
+  font-family: Arial, sans-serif; 
+  margin: 20px; 
+  padding: 0; 
+}
+
+.container {
+  max-width: 400px;  /* Contenedor centrado y con ancho limitado */
+  margin: auto;
+}
+
+/* ===== Inputs y botones ===== */
+input, button { 
+  display: block; 
+  width: 100%;      
+  margin: 10px 0; 
+  padding: 12px;    
+  font-size: 16px;  
+  box-sizing: border-box; 
+  border-radius: 6px;
+  border: 1px solid #ccc;
+}
+
+button {
+  background-color: #007bff;
+  color: white;
+  cursor: pointer;
+  border: none;
+}
+
+button:disabled {
+  background-color: #aaa;
+  cursor: not-allowed;
+}
+
+/* ===== Log de mensajes ===== */
+#mensaje { 
+  margin-top: 20px; 
+  white-space: pre-line; 
+  padding: 12px; 
+  border: 1px solid #ccc; 
+  background: #f2f2f2; 
+  overflow-wrap: break-word; 
+  word-break: break-word;
+  border-radius: 6px;
+}
+
+#mensaje a {
+  color: #007bff;
+  text-decoration: none;
+  word-break: break-word;
+}
 </style>
 </head>
 <body>
 
-<h2>Ver mis recibos de nómina</h2>
+<div class="container">
+  <h2>Acceso con código OTP por correo</h2>
 
-<input id="email" placeholder="Escribe tu correo">
-<button id="btnEnviar" onclick="enviarCodigo()">Enviar código</button>
+  <input id="email" placeholder="Escribe tu correo">
+  <button id="btnEnviar" onclick="enviarCodigo()">Enviar código</button>
 
-<input id="codigo" placeholder="Escribe el código recibido" disabled>
-<button id="btnVerificar" onclick="verificarCodigo()" disabled>Verificar</button>
+  <input id="codigo" placeholder="Escribe el código recibido" disabled>
+  <button id="btnVerificar" onclick="verificarCodigo()" disabled>Verificar</button>
 
-<p id="mensaje"></p>
+  <p id="mensaje"></p>
+</div>
 
 <script>
 const APPS_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbwB4LqY84fyboA-F-XvPGAcULplruxRDT6s7ucriDW7hoLV2Q13DVxzb8COeYk-YK8hOw/exec";
-
 const mensaje = document.getElementById("mensaje");
-
-function log(msg){
-  mensaje.innerText += msg + "\n";
-}
 
 // Habilitar/deshabilitar input y botón del código
 function setCodigoEnabled(enabled){
@@ -46,21 +95,21 @@ async function enviarCodigo(){
     return; 
   }
 
-  // Limpiamos todo el log y mostramos enviando código
+  // Limpiamos log y mostramos enviando código
   mensaje.innerText = "📤 Enviando código por correo...\n";
 
   try{
     const resp = await fetch(APPS_SCRIPT_URL + "?email=" + encodeURIComponent(email));
     const data = await resp.json();
     if(data.ok){
-      log("✅ Código enviado al correo: " + email);
+      mensaje.innerText += "✅ Código enviado al correo: " + email + "\n";
       setCodigoEnabled(true);
     } else {
-      log("❌ Error: " + data.mensaje);
+      mensaje.innerText += "❌ Error: " + data.mensaje + "\n";
       setCodigoEnabled(false);
     }
   } catch(e){
-    log("❌ Error al enviar el código: " + e);
+    mensaje.innerText += "❌ Error al enviar el código: " + e + "\n";
     setCodigoEnabled(false);
   }
 }
@@ -69,14 +118,14 @@ async function verificarCodigo(){
   const email = document.getElementById("email").value.trim();
   const codigo = document.getElementById("codigo").value.trim();
   if(!email || !codigo){ 
-    log("❌ Completa correo y código"); 
+    mensaje.innerText += "❌ Completa correo y código\n"; 
     return; 
   }
 
-  // Guardamos los mensajes previos de envío de correo
+  // Guardamos solo los mensajes previos de envío de correo
   let logPrevio = mensaje.innerText.split("\n").filter(line => line.startsWith("📤") || line.startsWith("✅ Código enviado")).join("\n");
 
-  // Mostramos "verificando código..."
+  // Mostramos "Verificando código..."
   mensaje.innerText = logPrevio + "\n🔄 Verificando código...\n";
 
   try{
@@ -88,7 +137,7 @@ async function verificarCodigo(){
     const data = await resp.json();
 
     if(data.ok){
-      // Reemplazamos "🔄 Verificando código..." por ✅ Código correcto
+      // Reemplazamos "Verificando código..." por ✅ Código correcto
       mensaje.innerText = logPrevio + "\n✅ Código correcto\n";
 
       // Crear enlace con emoji de ojo y texto
@@ -104,7 +153,7 @@ async function verificarCodigo(){
       document.getElementById("email").value = "";
 
     } else {
-      // Reemplazamos "🔄 Verificando código..." por ❌ Código incorrecto
+      // Reemplazamos "Verificando código..." por ❌ Código incorrecto
       mensaje.innerText = logPrevio + "\n❌ " + data.mensaje + "\n";
       // Input y botón siguen habilitados para reintento
     }
@@ -119,4 +168,3 @@ setCodigoEnabled(false);
 
 </body>
 </html>
-
