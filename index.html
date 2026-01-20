@@ -37,19 +37,19 @@
 <script>
 // ======= FIREBASE =======
 const firebaseConfig = {
-  apiKey: "TU_API_KEY",
-  authDomain: "TU_AUTH_DOMAIN",
-  projectId: "TU_PROJECT_ID",
-  storageBucket: "TU_BUCKET",
-  messagingSenderId: "TU_MESSAGING_ID",
-  appId: "TU_APP_ID",
-  measurementId: "TU_MEASUREMENT_ID"
+  apiKey: "AIzaSyCOxPGwuNYUqE_rmDeawt_x_lsVMNSpx6w",
+  authDomain: "acceso-drive-otp-c13fb.firebaseapp.com",
+  projectId: "acceso-drive-otp-c13fb",
+  storageBucket: "acceso-drive-otp-c13fb.firebasestorage.app",
+  messagingSenderId: "620751699211",
+  appId: "1:620751699211:web:79811953dfef547664f60e",
+  measurementId: "G-CVTNV4G66W"
 };
 
 firebase.initializeApp(firebaseConfig);
 
 // ======= APPS SCRIPT =======
-const APPS_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbwUfoXe3Dv0HzBsGArXPWPyWdL0NFC_PrWo_DqfdXjQT25UxLsPqCHmATtIMc74WOSN/exec";
+const APPS_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbykxvJV31sMMXXF_NoxqVLqqAXtk3KVbyP0zsNogi3KedFQK3hF0EWg312t2AiWC-Qymg/exec";
 
 window.recaptchaVerifier = new firebase.auth.RecaptchaVerifier('enviarCodigo', {
   'size': 'invisible'
@@ -164,3 +164,4 @@ async function verificarCodigo() {
 
 </body>
 </html>
+
