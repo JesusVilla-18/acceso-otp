@@ -1,28 +1,20 @@
 <!DOCTYPE html>
 <html>
 <head>
-<meta charset="utf-8">
-<title>Acceso con correo OTP</title>
-<style>
-body { font-family: Arial; margin: 40px; }
-input, button { display:block; margin:10px 0; padding:8px; }
-#mensaje {
-  margin-top:20px;
-  background:#f2f2f2;
-  padding:10px;
-  border: 1px solid #ccc;
-  white-space: pre-line;
-}
-</style>
+  <meta charset="utf-8">
+  <title>Acceso con Código Email</title>
+  <style>
+    body { font-family: Arial; margin:40px; }
+    input, button { display:block; margin:10px 0; padding:8px; }
+    #mensaje { margin-top:20px; white-space: pre-line; border:1px solid #ccc; padding:10px; }
+  </style>
 </head>
 <body>
 
 <h2>Acceso con código por correo</h2>
 
-<input id="telefono" placeholder="Escribe tu celular (10 dígitos)">
-<button onclick="enviarCodigo()">Enviar código por correo</button>
-
-<br>
+<input id="email" placeholder="Escribe tu correo">
+<button onclick="enviarCodigo()">Enviar código</button>
 
 <input id="codigo" placeholder="Escribe el código recibido">
 <button onclick="verificarCodigo()">Verificar</button>
@@ -32,65 +24,40 @@ input, button { display:block; margin:10px 0; padding:8px; }
 <script>
 const APPS_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbxXpztFC6MvQHk2Bh--7hpLqiHf-FYkN5OqxQGj1huM71PnNvbOxRMLxVZzAfaKV0P7KA/exec";
 
-// ===== JSONP =====
-function jsonp(url){
-  return new Promise((resolve, reject)=>{
-    window.callback = resolve;
+function log(msg){ document.getElementById("mensaje").innerText += msg + "\n"; }
 
-    const s = document.createElement("script");
-    s.src = url + "&callback=callback";
-    s.onerror = ()=>reject("Error al conectar con Apps Script");
-    document.body.appendChild(s);
-  });
-}
+async function enviarCodigo() {
+  document.getElementById("mensaje").innerText = "";
+  const email = document.getElementById("email").value.trim();
+  if (!email) { log("❌ Escribe tu correo."); return; }
 
-async function enviarCodigo(){
-  let tel = document.getElementById("telefono").value.trim();
-
-  if (tel.length !== 10 || isNaN(tel)) {
-    document.getElementById("mensaje").innerText =
-      "❌ Escribe 10 dígitos válidos.";
-    return;
-  }
-
-  const numeroSheet = "52" + tel;
-
-  document.getElementById("mensaje").innerText =
-    "📨 Enviando código por correo...";
-
-  const data = await jsonp(
-    `${APPS_SCRIPT_URL}?cel=${numeroSheet}&accion=enviar`
-  );
-
-  if (data.existe) {
-    document.getElementById("mensaje").innerText =
-      "✅ Código enviado. Revisa tu correo (vence en 2 min).";
-  } else {
-    document.getElementById("mensaje").innerText =
-      "❌ Tu número no está autorizado.";
+  log("🔄 Enviando código al correo...");
+  try {
+    const resp = await fetch(`${APPS_SCRIPT_URL}?email=${encodeURIComponent(email)}`);
+    const data = await resp.json();
+    if (data.success) log("✅ Código enviado. Revisa tu correo (expira en 2 minutos).");
+    else log("❌ Error al enviar el código.");
+  } catch(e) {
+    log("❌ Error real de sistema: " + e);
   }
 }
 
-async function verificarCodigo(){
-  let tel = document.getElementById("telefono").value.trim();
-  let codigo = document.getElementById("codigo").value.trim();
+async function verificarCodigo() {
+  const email = document.getElementById("email").value.trim();
+  const codigo = document.getElementById("codigo").value.trim();
+  if (!email || !codigo) { log("❌ Debes completar ambos campos."); return; }
 
-  const numeroSheet = "52" + tel;
-
-  document.getElementById("mensaje").innerText =
-    "🔄 Verificando código...";
-
-  const data = await jsonp(
-    `${APPS_SCRIPT_URL}?cel=${numeroSheet}&accion=verificar&codigo=${codigo}`
-  );
-
-  if (data.valido) {
-    document.getElementById("mensaje").innerHTML =
-      "✅ Código correcto.<br><br>" +
-      "🔗 Tu archivo:<br><b>" + data.link + "</b>";
-  } else {
-    document.getElementById("mensaje").innerText =
-      "❌ Código incorrecto o vencido.";
+  try {
+    const resp = await fetch(APPS_SCRIPT_URL, {
+      method: "POST",
+      headers: {'Content-Type':'application/x-www-form-urlencoded'},
+      body: `email=${encodeURIComponent(email)}&codigo=${encodeURIComponent(codigo)}`
+    });
+    const data = await resp.json();
+    if (data.valid) log("✅ Código correcto. Acceso permitido.");
+    else log("❌ Código incorrecto o expirado.");
+  } catch(e) {
+    log("❌ Error al verificar: " + e);
   }
 }
 </script>
