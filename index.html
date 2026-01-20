@@ -2,17 +2,11 @@
 <html>
 <head>
   <meta charset="utf-8">
-  <title>Acceso con código por correo</title>
+  <title>Acceso con código</title>
   <style>
-    body { font-family: Arial; margin:40px; }
-    input, button { display:block; margin:10px 0; padding:8px; width:300px; }
-    #mensaje {
-      margin-top:20px;
-      background:#f2f2f2;
-      padding:10px;
-      white-space: pre-line;
-      border:1px solid #ccc;
-    }
+    body { font-family: Arial; margin: 40px; }
+    input, button { display:block; margin:10px 0; padding:8px; }
+    #mensaje { margin-top:20px; white-space: pre-line; }
   </style>
 </head>
 <body>
@@ -22,67 +16,71 @@
 <input id="email" placeholder="Escribe tu correo">
 <button onclick="enviarCodigo()">Enviar código</button>
 
-<br>
-
 <input id="codigo" placeholder="Escribe el código recibido">
 <button onclick="verificarCodigo()">Verificar código</button>
 
-<h3>Registro de sistema:</h3>
 <p id="mensaje"></p>
 
 <script>
-const APPS_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbx3-06UCQorPkEcD0tYLc9_ZQ0H9g_ORkaSxasfmQ42dbdaTgmihe8CGcStf9M_lrav0Q/exec";
+const APPS_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbxYI_TXf6FguZzLC5Byvq1FC9Lzv2-cQSIdWsmWJPtxnNrSNMfyZwhem2h30boaJq1Qpg/exec";
 
-let codigoGenerado = null; // código enviado
-let correoGlobal = "";
-
-// función para logs
 function log(msg){
-  document.getElementById("mensaje").innerText += "\n" + msg;
+  document.getElementById("mensaje").innerText = msg;
 }
 
-// -------------------- ENVIAR CÓDIGO --------------------
-function enviarCodigo(){
-  document.getElementById("mensaje").innerText = "";
+async function enviarCodigo(){
   const email = document.getElementById("email").value.trim();
   if(!email){ log("❌ Escribe un correo"); return; }
 
-  correoGlobal = email;
   log("📤 Enviando código por correo...");
 
-  const cb = "cb" + Date.now();
-  window[cb] = function(data){
-    if(data.enviado){
-      codigoGenerado = data.codigo; // guardamos código temporalmente
-      log("✅ Código enviado. Revisa tu correo (válido 2 min).");
-    } else {
-      log("❌ Error al enviar código: " + (data.error || "desconocido"));
-    }
-    delete window[cb];
-    document.body.removeChild(script);
-  };
+  try {
+    const resp = await fetch(`${APPS_SCRIPT_URL}?email=${encodeURIComponent(email)}`);
+    const data = await resp.json();
 
-  const script = document.createElement("script");
-  script.src = `${APPS_SCRIPT_URL}?email=${encodeURIComponent(email)}&callback=${cb}`;
-  document.body.appendChild(script);
+    if(!data.existe){
+      log("❌ Correo no autorizado");
+      return;
+    }
+
+    log("✅ Código enviado. Revisa tu correo (válido 2 min).");
+
+  } catch(e){
+    console.error(e);
+    log("❌ Error al enviar el código");
+  }
 }
 
-// -------------------- VERIFICAR CÓDIGO --------------------
-function verificarCodigo(){
+async function verificarCodigo(){
+  const email = document.getElementById("email").value.trim();
   const codigo = document.getElementById("codigo").value.trim();
-  if(!codigoGenerado){
-    log("❌ Primero solicita el código.");
-    return;
-  }
-  if(codigo !== codigoGenerado){
-    log("❌ Código incorrecto o expirado.");
-    return;
-  }
+  if(!email || !codigo){ log("❌ Completa ambos campos"); return; }
 
-  log("✅ Código correcto.");
-  
-  // Mostrar link de Drive (ejemplo)
-  log("🔗 Aquí está tu archivo: https://drive.google.com/tu-enlace-aqui");
+  log("🔄 Verificando código...");
+
+  try {
+    const form = new URLSearchParams();
+    form.append("email", email);
+    form.append("codigo", codigo);
+
+    const resp = await fetch(APPS_SCRIPT_URL, {
+      method: "POST",
+      body: form
+    });
+
+    const data = await resp.json();
+
+    if(!data.ok){
+      log("❌ " + data.mensaje);
+      return;
+    }
+
+    log("✅ Código correcto!\n🔗 Tu archivo: " + data.link);
+
+  } catch(e){
+    console.error(e);
+    log("❌ Error al verificar código");
+  }
 }
 </script>
 
