@@ -1,13 +1,13 @@
 <!DOCTYPE html>
 <html>
 <head>
-  <meta charset="utf-8">
-  <title>Acceso con código OTP</title>
-  <style>
-    body { font-family: Arial; margin: 40px; }
-    input, button { display:block; margin:10px 0; padding:8px; }
-    #mensaje { margin-top:20px; white-space: pre-line; padding:10px; border:1px solid #ccc; background:#f2f2f2;}
-  </style>
+<meta charset="utf-8">
+<title>Acceso OTP</title>
+<style>
+body { font-family: Arial; margin:40px; }
+input, button { display:block; margin:10px 0; padding:8px; }
+#mensaje { margin-top:20px; white-space: pre-line; padding:10px; border:1px solid #ccc; background:#f2f2f2; }
+</style>
 </head>
 <body>
 
@@ -22,7 +22,7 @@
 <p id="mensaje"></p>
 
 <script>
-const APPS_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbyGwGwQG8fwqEW7SCn85ZoTHAtZM0jUpjS-T70NCvVWPeHXxAUEcC3vhnXK1xJ0xgEjDw/exec";
+const APPS_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbxFve7wgPN4H4FYcExoP83DkiE09LlFbF9VbOjbJoPE9l8pZqow4KlUFuz7e3ri3rNiQg/exec";
 
 function log(msg){ document.getElementById("mensaje").innerText += msg + "\n"; }
 
@@ -32,14 +32,15 @@ async function enviarCodigo(){
   if(!email){ log("❌ Escribe tu correo"); return; }
 
   log("📤 Enviando código por correo...");
-
   try{
     const resp = await fetch(APPS_SCRIPT_URL + "?email=" + encodeURIComponent(email));
     const data = await resp.json();
     if(data.ok){
       log("✅ Código enviado al correo: " + email);
+      log("DEBUG: " + JSON.stringify(data.debug, null,2));
     } else {
       log("❌ Error: " + data.mensaje);
+      log("DEBUG: " + JSON.stringify(data.debug || {}, null,2));
     }
   } catch(e){
     log("❌ Error al enviar el código: " + e);
@@ -52,14 +53,14 @@ async function verificarCodigo(){
   if(!email || !codigo){ log("❌ Completa correo y código"); return; }
 
   log("🔄 Verificando código...");
-
   try{
     const resp = await fetch(APPS_SCRIPT_URL, {
-      method: "POST",
-      headers: {"Content-Type":"application/x-www-form-urlencoded"},
-      body: `email=${encodeURIComponent(email)}&codigo=${encodeURIComponent(codigo)}`
+      method:"POST",
+      headers:{"Content-Type":"application/x-www-form-urlencoded"},
+      body:`email=${encodeURIComponent(email)}&codigo=${encodeURIComponent(codigo)}`
     });
     const data = await resp.json();
+    log(JSON.stringify(data, null, 2));
     if(data.ok){
       log("✅ Código correcto");
       log("🔗 Link: " + data.link);
