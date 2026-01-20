@@ -2,84 +2,72 @@
 <html>
 <head>
   <meta charset="utf-8">
-  <title>Acceso con código</title>
+  <title>Acceso con código OTP</title>
   <style>
     body { font-family: Arial; margin: 40px; }
     input, button { display:block; margin:10px 0; padding:8px; }
-    #mensaje { margin-top:20px; white-space: pre-line; }
+    #mensaje { margin-top:20px; white-space: pre-line; padding:10px; border:1px solid #ccc; background:#f2f2f2;}
   </style>
 </head>
 <body>
 
-<h2>Acceso con código por correo</h2>
+<h2>Acceso con código OTP por correo</h2>
 
 <input id="email" placeholder="Escribe tu correo">
 <button onclick="enviarCodigo()">Enviar código</button>
 
 <input id="codigo" placeholder="Escribe el código recibido">
-<button onclick="verificarCodigo()">Verificar código</button>
+<button onclick="verificarCodigo()">Verificar</button>
 
 <p id="mensaje"></p>
 
 <script>
-const APPS_SCRIPT_URL = "https://script.google.com/macros/s/AKfycby1voZOCYVu3eyWm6sN9GPSrtTVifZFPQg4kLxEE6eUQErMFPD--X8mu_3MFXzMisdiaA/exec";
+const APPS_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbyGwGwQG8fwqEW7SCn85ZoTHAtZM0jUpjS-T70NCvVWPeHXxAUEcC3vhnXK1xJ0xgEjDw/exec";
 
-function log(msg){
-  document.getElementById("mensaje").innerText = msg;
-}
+function log(msg){ document.getElementById("mensaje").innerText += msg + "\n"; }
 
 async function enviarCodigo(){
+  document.getElementById("mensaje").innerText = "";
   const email = document.getElementById("email").value.trim();
-  if(!email){ log("❌ Escribe un correo"); return; }
+  if(!email){ log("❌ Escribe tu correo"); return; }
 
   log("📤 Enviando código por correo...");
 
-  try {
-    const resp = await fetch(`${APPS_SCRIPT_URL}?email=${encodeURIComponent(email)}`);
+  try{
+    const resp = await fetch(APPS_SCRIPT_URL + "?email=" + encodeURIComponent(email));
     const data = await resp.json();
-
-    if(!data.existe){
-      log("❌ Correo no autorizado");
-      return;
+    if(data.ok){
+      log("✅ Código enviado al correo: " + email);
+    } else {
+      log("❌ Error: " + data.mensaje);
     }
-
-    log("✅ Código enviado. Revisa tu correo (válido 2 min).");
-
   } catch(e){
-    console.error(e);
-    log("❌ Error al enviar el código");
+    log("❌ Error al enviar el código: " + e);
   }
 }
 
 async function verificarCodigo(){
   const email = document.getElementById("email").value.trim();
   const codigo = document.getElementById("codigo").value.trim();
-  if(!email || !codigo){ log("❌ Completa ambos campos"); return; }
+  if(!email || !codigo){ log("❌ Completa correo y código"); return; }
 
   log("🔄 Verificando código...");
 
-  try {
-    const form = new URLSearchParams();
-    form.append("email", email);
-    form.append("codigo", codigo);
-
+  try{
     const resp = await fetch(APPS_SCRIPT_URL, {
       method: "POST",
-      body: form
+      headers: {"Content-Type":"application/x-www-form-urlencoded"},
+      body: `email=${encodeURIComponent(email)}&codigo=${encodeURIComponent(codigo)}`
     });
-
     const data = await resp.json();
-
-    if(!data.ok){
+    if(data.ok){
+      log("✅ Código correcto");
+      log("🔗 Link: " + data.link);
+    } else {
       log("❌ " + data.mensaje);
-      return;
     }
-
-    log("✅ Código correcto!\n🔗 Tu archivo: " + data.link);
-
   } catch(e){
-    console.error(e);
-    log("❌ Error al verificar código");
+    log("❌ Error al verificar el código: " + e);
   }
 }
 </script>
