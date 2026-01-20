@@ -14,10 +14,10 @@ input, button { display:block; margin:10px 0; padding:8px; }
 <h2>Acceso con código OTP por correo</h2>
 
 <input id="email" placeholder="Escribe tu correo">
-<button onclick="enviarCodigo()">Enviar código</button>
+<button id="btnEnviar" onclick="enviarCodigo()">Enviar código</button>
 
-<input id="codigo" placeholder="Escribe el código recibido">
-<button onclick="verificarCodigo()">Verificar</button>
+<input id="codigo" placeholder="Escribe el código recibido" disabled>
+<button id="btnVerificar" onclick="verificarCodigo()" disabled>Verificar</button>
 
 <p id="mensaje"></p>
 
@@ -28,8 +28,16 @@ function log(msg){
   document.getElementById("mensaje").innerText += msg + "\n";
 }
 
+// Función para habilitar/deshabilitar input y botón del código
+function setCodigoEnabled(enabled){
+  document.getElementById("codigo").disabled = !enabled;
+  document.getElementById("btnVerificar").disabled = !enabled;
+  if(!enabled){
+    document.getElementById("codigo").value = "";
+  }
+}
+
 async function enviarCodigo(){
-  document.getElementById("mensaje").innerText = "";
   const email = document.getElementById("email").value.trim();
   if(!email){ log("❌ Escribe tu correo"); return; }
 
@@ -39,11 +47,14 @@ async function enviarCodigo(){
     const data = await resp.json();
     if(data.ok){
       log("✅ Código enviado al correo: " + email);
+      setCodigoEnabled(true); // Habilitamos input y botón del código
     } else {
       log("❌ Error: " + data.mensaje);
+      setCodigoEnabled(false);
     }
   } catch(e){
     log("❌ Error al enviar el código: " + e);
+    setCodigoEnabled(false);
   }
 }
 
@@ -74,15 +85,24 @@ async function verificarCodigo(){
       a.target = "_blank";
       a.innerText = linkText;
 
-      mensaje.appendChild(a);                   // Agregar enlace
-      mensaje.appendChild(document.createElement("br")); // Salto de línea
+      mensaje.appendChild(a);
+      mensaje.appendChild(document.createElement("br"));
+
+      // Limpiar inputs y deshabilitar input/botón del código
+      setCodigoEnabled(false);
+      document.getElementById("email").value = "";
     } else {
       log("❌ " + data.mensaje);
+      // No hacemos nada: input y botón siguen habilitados para reintentar
     }
   } catch(e){
     log("❌ Error al verificar el código: " + e);
+    // No hacemos nada: input y botón siguen habilitados
   }
 }
+
+// Al cargar la página, aseguramos que el código esté deshabilitado
+setCodigoEnabled(false);
 </script>
 
 </body>
