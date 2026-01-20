@@ -63,8 +63,7 @@ async function verificarCodigo(){
     log(JSON.stringify(data, null, 2));
     if(data.ok){
       log("✅ Código correcto");
-      document.getElementById("mensaje").innerHTML +=
-    '<br>🔗 Link: <a href="' + data.link + '" target="_blank">' + data.link + '</a>';
+      log("🔗 Link: " + data.link);
     } else {
       log("❌ " + data.mensaje);
     }
@@ -76,4 +75,5 @@ async function verificarCodigo(){
 
 </body>
 </html>
+
 
