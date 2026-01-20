@@ -1,167 +1,99 @@
 <!DOCTYPE html>
 <html>
 <head>
-  <meta charset="utf-8">
-  <title>Acceso con OTP</title>
-
-  <script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-app-compat.js"></script>
-  <script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-auth-compat.js"></script>
-
-  <style>
-    body { font-family: Arial; margin: 40px; }
-    input, button { display:block; margin:10px 0; padding:8px; }
-    #mensaje {
-      margin-top:20px;
-      background:#f2f2f2;
-      padding:10px;
-      white-space: pre-line;
-      border: 1px solid #ccc;
-    }
-  </style>
+<meta charset="utf-8">
+<title>Acceso con correo OTP</title>
+<style>
+body { font-family: Arial; margin: 40px; }
+input, button { display:block; margin:10px 0; padding:8px; }
+#mensaje {
+  margin-top:20px;
+  background:#f2f2f2;
+  padding:10px;
+  border: 1px solid #ccc;
+  white-space: pre-line;
+}
+</style>
 </head>
 <body>
 
-<h2>Acceso con código SMS</h2>
+<h2>Acceso con código por correo</h2>
 
 <input id="telefono" placeholder="Escribe tu celular (10 dígitos)">
-<button id="enviarCodigo" onclick="enviarCodigo()">Enviar código</button>
+<button onclick="enviarCodigo()">Enviar código por correo</button>
 
 <br>
 
 <input id="codigo" placeholder="Escribe el código recibido">
 <button onclick="verificarCodigo()">Verificar</button>
 
-<h3>Registro de sistema:</h3>
 <p id="mensaje"></p>
 
 <script>
-// ======= FIREBASE =======
-const firebaseConfig = {
-  apiKey: "AIzaSyCOxPGwuNYUqE_rmDeawt_x_lsVMNSpx6w",
-  authDomain: "acceso-drive-otp-c13fb.firebaseapp.com",
-  projectId: "acceso-drive-otp-c13fb",
-  storageBucket: "acceso-drive-otp-c13fb.firebasestorage.app",
-  messagingSenderId: "620751699211",
-  appId: "1:620751699211:web:79811953dfef547664f60e",
-  measurementId: "G-CVTNV4G66W"
-};
+const APPS_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbxXpztFC6MvQHk2Bh--7hpLqiHf-FYkN5OqxQGj1huM71PnNvbOxRMLxVZzAfaKV0P7KA/exec";
 
-firebase.initializeApp(firebaseConfig);
+// ===== JSONP =====
+function jsonp(url){
+  return new Promise((resolve, reject)=>{
+    window.callback = resolve;
 
-// ======= APPS SCRIPT =======
-const APPS_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbykxvJV31sMMXXF_NoxqVLqqAXtk3KVbyP0zsNogi3KedFQK3hF0EWg312t2AiWC-Qymg/exec";
-
-window.recaptchaVerifier = new firebase.auth.RecaptchaVerifier('enviarCodigo', {
-  'size': 'invisible'
-});
-
-let confirmationResult;
-let telefonoGlobal = "";
-
-// Registro en pantalla
-function log(msg){
-  document.getElementById("mensaje").innerText += "\n" + msg;
-}
-
-// JSONP: se ejecuta automáticamente cuando Apps Script responde
-function jsonpCallback(data){
-  window.jsonpData = data;
-}
-
-// Llamada JSONP
-function llamarJSONP(numero){
-  return new Promise((resolve, reject) => {
-    window.jsonpData = null;
-
-    const script = document.createElement('script');
-    script.src = `${APPS_SCRIPT_URL}?cel=${numero}&callback=jsonpCallback`;
-    script.onerror = () => reject("No se pudo consultar la base de datos");
-    document.body.appendChild(script);
-
-    let intentos = 0;
-    const interval = setInterval(() => {
-      if(window.jsonpData){
-        clearInterval(interval);
-        document.body.removeChild(script);
-        resolve(window.jsonpData);
-      } else if(intentos++ > 50){ // timeout ~5s
-        clearInterval(interval);
-        document.body.removeChild(script);
-        reject("Tiempo de espera agotado");
-      }
-    }, 100);
+    const s = document.createElement("script");
+    s.src = url + "&callback=callback";
+    s.onerror = ()=>reject("Error al conectar con Apps Script");
+    document.body.appendChild(s);
   });
 }
 
-// ==================== FUNCIONES PRINCIPALES ====================
-async function enviarCodigo() {
-  document.getElementById("mensaje").innerText = "";
-
+async function enviarCodigo(){
   let tel = document.getElementById("telefono").value.trim();
-  if(tel.length !== 10 || isNaN(tel)){
-    log("❌ Escribe un celular válido de 10 dígitos.");
+
+  if (tel.length !== 10 || isNaN(tel)) {
+    document.getElementById("mensaje").innerText =
+      "❌ Escribe 10 dígitos válidos.";
     return;
   }
 
-  telefonoGlobal = "+52" + tel;
-  const numeroParaSheet = "52" + tel;
+  const numeroSheet = "52" + tel;
 
-  log("📞 Teléfono escrito: " + tel);
-  log("➡️ Para Firebase: " + telefonoGlobal);
-  log("➡️ Para Sheets: " + numeroParaSheet);
-  log("🔄 Consultando Apps Script...");
+  document.getElementById("mensaje").innerText =
+    "📨 Enviando código por correo...";
 
-  try {
-    const data = await llamarJSONP(numeroParaSheet);
+  const data = await jsonp(
+    `${APPS_SCRIPT_URL}?cel=${numeroSheet}&accion=enviar`
+  );
 
-    if(!data || !data.existe){
-      log("⚠️ Resultado final: NO AUTORIZADO");
-      return;
-    }
-
-    log("✅ AUTORIZADO — enviando SMS...");
-
-    confirmationResult = await firebase.auth()
-      .signInWithPhoneNumber(telefonoGlobal, window.recaptchaVerifier);
-
-    log("📩 Código enviado por SMS.");
-
-  } catch(e){
-    console.error(e);
-    log("❌ ERROR REAL DE SISTEMA:");
-    log(e.toString());
+  if (data.existe) {
+    document.getElementById("mensaje").innerText =
+      "✅ Código enviado. Revisa tu correo (vence en 2 min).";
+  } else {
+    document.getElementById("mensaje").innerText =
+      "❌ Tu número no está autorizado.";
   }
 }
 
-async function verificarCodigo() {
+async function verificarCodigo(){
+  let tel = document.getElementById("telefono").value.trim();
   let codigo = document.getElementById("codigo").value.trim();
-  if(!confirmationResult){
-    log("Primero solicita el código.");
-    return;
-  }
 
-  try{
-    await confirmationResult.confirm(codigo);
+  const numeroSheet = "52" + tel;
 
-    const telParaSheet = telefonoGlobal.replace("+", "");
-    log("🔁 Reconsultando Sheets con: " + telParaSheet);
+  document.getElementById("mensaje").innerText =
+    "🔄 Verificando código...";
 
-    const data = await llamarJSONP(telParaSheet);
+  const data = await jsonp(
+    `${APPS_SCRIPT_URL}?cel=${numeroSheet}&accion=verificar&codigo=${codigo}`
+  );
 
-    if(!data || !data.existe){
-      log("❌ Número no autorizado.");
-      return;
-    }
-
-    document.getElementById("mensaje").innerHTML +=
-      "\n\n✅ Código correcto.\n🔗 Link: " + data.link;
-
-  } catch(error){
-    log("❌ Código incorrecto.");
+  if (data.valido) {
+    document.getElementById("mensaje").innerHTML =
+      "✅ Código correcto.<br><br>" +
+      "🔗 Tu archivo:<br><b>" + data.link + "</b>";
+  } else {
+    document.getElementById("mensaje").innerText =
+      "❌ Código incorrecto o vencido.";
   }
 }
 </script>
 
 </body>
 </html>
-
